@@ -425,7 +425,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def _get(self):
         if self.headers.get("Sec-Fetch-Site","")=="cross-site":
-            raise ValueError("دسترسی بین‌سایتی مجاز نیست")
+            # A normal top-level link from the Render dashboard is cross-site.
+            # Allow only safe document navigation; keep cross-site API/media reads denied.
+            is_document_navigation=(self.headers.get("Sec-Fetch-Mode")=="navigate"
+                and self.headers.get("Sec-Fetch-Dest")=="document"
+                and urlsplit(self.path).path in ("/","/index.html"))
+            if not is_document_navigation:
+                raise ValueError("دسترسی بین‌سایتی مجاز نیست")
         path=urlsplit(self.path).path;parts=path.strip("/").split("/")
         studio=self.server.studio
         if path=="/favicon.svg":
