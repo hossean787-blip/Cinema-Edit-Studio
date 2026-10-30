@@ -67,3 +67,14 @@ GitHub Actions: runner availability depends on account limits and billing; no su
 - Source archive `Cinema-Edit-Studio-integrated-v0.2.zip` created in chat; archive CRC, extraction and complete 5-test rerun passed. No user videos are included in the backup.
 - GitHub source and tests committed to main; CI results are still unverified (combined status empty).
 - Neural RIFE, Real-ESRGAN, true Blender compositions, commercial release and remote asynchronous operation remain *incomplete*. Upconverted Full HD is not true neural restoration.
+
+
+## Real AI + Blender + GitHub Actions verification — 2026-10-30
+- REAL RIFE (official ncnn Vulkan binary, llvmpipe software Vulkan): created and decoded a 96x96 interpolated PNG frame from two source images.
+- REAL Real-ESRGAN (official ncnn Vulkan binary, llvmpipe): generated and validated 192x192 output from 96x96 input.
+- REAL Blender 4.5.15 Cycles CPU: SHA256 of official downloaded archive matched official published checksum, rendered 12 frames, 240x426 MP4 lasting 0.4 sec and decoded without error.
+- GitHub Actions run 41108379735: `Real AI and Blender CPU smoke` completed SUCCESS for both `rife-realesrgan` and `blender-cpu` jobs.
+- GitHub Actions run 41108379667: `Integrated cinema quality gate` SUCCESS.
+- GitHub Actions run 41108379448: `Verify cinematic studio` SUCCESS after fixing broken test_studio.py literal backslash-n and FFmpeg 0.5-second argument.
+- Hardened new `neural_video.py` pipeline committed, local 4 mocked-inference adapter tests passed (these prove orchestration only). Authentic inference separately verified as above.
+- The end-to-end full user-video-through-RIFE/ESRGAN pipeline has not been tested, and needs production-quality/performance/release acceptance; no commercial-final claim.
