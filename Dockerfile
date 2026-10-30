@@ -7,6 +7,6 @@ RUN python -m pip install --no-cache-dir opentimelineio==0.18.1
 COPY . .
 RUN useradd --create-home --uid 10001 studio && mkdir -p /data && chown -R studio:studio /data /app
 USER studio
-ENV CINEMA_WORKSPACE=/data
+ENV CINEMA_WORKSPACE=/data CINEMA_MAX_UPLOAD_MB=95 CINEMA_MAX_WORKSPACE_MB=350
 EXPOSE 10000
 CMD ["sh","-c","exec python studio_web.py --host 0.0.0.0 --port ${PORT:-10000} --workspace ${CINEMA_WORKSPACE:-/data}"]
