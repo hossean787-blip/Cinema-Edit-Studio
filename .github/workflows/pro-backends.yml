@@ -1,0 +1,95 @@
+name: Pro toolchain integration smoke
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  professional-python:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install third-party system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libvidstab1.1 frei0r-plugins melt
+      - name: Install dedicated Python dependencies
+        run: python -m pip install -r requirements-professional.txt
+      - name: Run professional integration tests and legacy regression
+        run: |
+          python -m py_compile studio_backends.py studio_pro.py
+          python -m unittest discover -s tests -p 'test_professional_pipeline.py' -v
+          python -m unittest discover -s tests -v
+      - name: Test actual frei0r filter
+        run: |
+          ffmpeg -v error -y -f lavfi -i testsrc2=size=120x216:rate=15 -t 2 -c:v libx264 sample.mp4
+          python -c "from studio_backends import frei0r_filter; frei0r_filter('sample.mp4','frei0r.mp4',name='contrast0r')"
+          ffmpeg -v error -xerror -i frei0r.mp4 -f null -
+      - name: Validate actual MLT render
+        run: |
+          python -c "from studio_backends import export_mlt; export_mlt([{'file':'sample.mp4','start':0,'duration':1.5}],'timeline.mlt',fps=15)"
+          melt timeline.mlt -consumer avformat:mlt_render.mp4 vcodec=libx264 acodec=aac real_time=-1
+          ffprobe -v error -show_entries format=duration -of default=nw=1 mlt_render.mp4
+          ffmpeg -v error -xerror -i mlt_render.mp4 -f null -
+      - name: Save diagnostic proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pro-backends-test-renders
+          path: |
+            timeline.mlt
+            mlt_render.mp4
+            frei0r.mp4
+          if-no-files-found: ignore
+          retention-days: 3
+  auto-editor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download official Linux CLI
+        run: |
+          curl -fL --retry 3 -o auto-editor https://github.com/WyattBlue/auto-editor/releases/download/31.8.0/auto-editor-linux-x86_64
+          chmod +x auto-editor
+          ./auto-editor --version
+      - name: Test binary and trim synthetic media
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          ffmpeg -v error -y -f lavfi -i testsrc2=size=120x216:rate=24 -f lavfi -i sine=frequency=500:sample_rate=44100 -t 4 -c:v libx264 -c:a aac sample.mp4
+          python -c "from studio_backends import auto_cut; auto_cut('sample.mp4','cut.mp4','./auto-editor')"
+          ffprobe -v error -show_entries format=duration -of default=nw=1 cut.mp4
+          ffmpeg -v error -xerror -i cut.mp4 -f null -
+  whisper-cpp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Whisper.cpp from official tagged source
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg cmake build-essential
+          git clone --depth 1 --branch v1.9.5 https://github.com/ggml-org/whisper.cpp.git whisper-upstream
+          cmake -S whisper-upstream -B whisper-build -DCMAKE_BUILD_TYPE=Release
+          cmake --build whisper-build --config Release -j2 --target whisper-cli
+      - name: Download official tiny model and transcribe source sample
+        run: |
+          bash whisper-upstream/models/download-ggml-model.sh tiny.en
+          test -s whisper-upstream/models/ggml-tiny.en.bin
+          python - <<'PY'
+          from studio_backends import transcribe
+          from pathlib import Path
+          source=Path('whisper-upstream/samples/jfk.wav')
+          output=transcribe(source,'sample_transcript',
+            'whisper-build/bin/whisper-cli','whisper-upstream/models/ggml-tiny.en.bin')
+          print('SRT bytes:',output.stat().st_size)
+          assert output.stat().st_size>20
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: optional-transcription-proof
+          path: sample_transcript.srt
+          retention-days: 3
