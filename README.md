@@ -56,3 +56,14 @@ GitHub Actions `Render synthetic demo` can generate a downloadable artifact when
 
 ## GPU work blocked by environment
 RIFE / Real-ESRGAN and Blender are optional external tools, NOT activated by committing adapters. Their models, hardware, release-specific CLI behavior, license and actual service costs require validation. Nothing will auto-purchase or provision a paid GPU.
+
+
+## Cinematic effects
+Five optional FFmpeg color and light presets: `moody`, `punch`, `film`, `cold`, `warm`.
+Example: `python effects.py input.mp4 output.mp4 --preset punch`.
+No added titles. This processor is a color / grain / vignette effect system, not Blender 3D simulation. Renders have not yet been validated in GitHub CI.
+
+## Implementation status
+- Source code stored on main for six requested workstreams.
+- CI confirmation is unavailable from the currently exposed GitHub status result (empty status list).
+- Cloud GPU provisioning, model download, release packaging, Windows 7 install and end-to-end commercial QA remain incomplete.
