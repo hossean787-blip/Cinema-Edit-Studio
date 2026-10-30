@@ -1,0 +1,24 @@
+name: Integrated cinema quality gate
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Validate integrated source
+        run: python -m py_compile cinema_integrated.py
+      - name: Test no-install cinematic workflow with synthetic clips
+        run: python -m unittest -v tests.test_cinema_integrated
