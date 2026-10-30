@@ -52,6 +52,7 @@ def render_timeline(shots, output, *, resolution=(720,1280), fps=30,
         raise ValueError("Invalid resolution or frame rate")
     if style not in STYLES or not 0<=transition<=0.5:raise ValueError("Invalid style/transition")
     if output.exists(): raise FileExistsError("Output already exists")
+    warnings=[]
     clean=[]
     for i,shot in enumerate(shots):
         src=Path(shot['file']).resolve()
@@ -76,8 +77,11 @@ def render_timeline(shots, output, *, resolution=(720,1280), fps=30,
             if stabilize:
                 from studio_backends import stabilize as stabilize_video
                 stable=tmp/f"stable_{idx}.mp4"
-                stabilize_video(source,stable)
-                source=stable
+                try:
+                    stabilize_video(source,stable)
+                    source=stable
+                except (RuntimeError,OSError,subprocess.CalledProcessError) as exc:
+                    warnings.append(f"Vid.Stab clip {idx+1}: {str(exc)[:160]}")
             common=(f"scale={w}:{h}:force_original_aspect_ratio=increase:flags=lanczos,"
                     f"crop={w}:{h},setsar=1,{STYLES[style]},format=yuv420p")
             segment=tmp/f"clip_{idx:03}.mp4"
@@ -151,11 +155,20 @@ def render_timeline(shots, output, *, resolution=(720,1280), fps=30,
         info=verify(stage,w,h,audio=True)
         # Emit editable sidecars referring to durable inputs, not transient fragments.
         # Speed is recorded in metadata because native basic MLT/OTIO export does not retime.
-        export_otio(clean,output.with_suffix(".otio"),fps=fps,music=music if music and music.parent!=tmp else None)
-        export_mlt(clean,output.with_suffix(".mlt"),fps=fps,music=music if music and music.parent!=tmp else None)
+        try:
+            export_otio(clean,output.with_suffix(".otio"),fps=fps,
+                        music=music if music and music.parent!=tmp else None)
+        except (ImportError,RuntimeError) as exc:
+            warnings.append("OpenTimelineIO: "+str(exc)[:160])
+        try:
+            export_mlt(clean,output.with_suffix(".mlt"),fps=fps,
+                       music=music if music and music.parent!=tmp else None)
+        except (ImportError,RuntimeError) as exc:
+            warnings.append("MLT export: "+str(exc)[:160])
         timing=output.with_suffix(".timeline.json")
         timing.write_text(json.dumps({"shots":clean,"speed_aware":True,"fps":fps,
             "overlay":overlay,"note":"OTIO/MLT tracks represent raw trim spans; speed ramps and overlay are authoritative in timeline JSON."},indent=2))
         os.replace(stage,output)
         if on_progress:on_progress(100,"رندر تأیید شد")
-    return {"file":str(output),"qa":info,"shot_count":len(clean),"resolution":[w,h],"fps":fps}
+    return {"file":str(output),"qa":info,"shot_count":len(clean),"resolution":[w,h],"fps":fps,
+            "warnings":warnings}
