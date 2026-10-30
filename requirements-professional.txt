@@ -1,0 +1,5 @@
+# Python interfaces; external executables never vendored.
+scenedetect==0.7.2
+opentimelineio==0.18.1
+opencolorio==2.6.0
+opencv-python-headless>=4.8,<5
