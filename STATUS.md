@@ -78,3 +78,28 @@ GitHub Actions: runner availability depends on account limits and billing; no su
 - GitHub Actions run 41108379448: `Verify cinematic studio` SUCCESS after fixing broken test_studio.py literal backslash-n and FFmpeg 0.5-second argument.
 - Hardened new `neural_video.py` pipeline committed, local 4 mocked-inference adapter tests passed (these prove orchestration only). Authentic inference separately verified as above.
 - The end-to-end full user-video-through-RIFE/ESRGAN pipeline has not been tested, and needs production-quality/performance/release acceptance; no commercial-final claim.
+
+## Professional 12-tool integration — 2026-10-30
+
+Repository: hossean787-blip/Cinema-Edit-Studio, ONLY branch main. Last known good at start: 9e88c78. Development commits are visible in main history; no force push, no new branch. This entry is a recovery checkpoint.
+
+- FFmpeg/FFprobe: تکمیل و آزموده‌شده — real H.264/AAC render, output probe and full decode, 25/25 local tests.
+- RIFE: تکمیل و آزموده‌شده در مقیاس کوچک — official binary processes 2-frame 96x96 MP4 into 4-frame MP4 (1 sec), all frames decoded; 1080p throughput unverified.
+- Real-ESRGAN: تکمیل و آزموده‌شده در مقیاس کوچک — official 2x model processes 2-frame 96x96 MP4 into 192x192 MP4; long video performance unverified.
+- Blender: تکمیل و آزموده‌شده — genuine Cycles CPU 12-frame 3D animation and video+music composite, audio/video duration drift 23 ms in small test.
+- MLT: تکمیل و آزموده‌شده — editable independent video/music tracks in .mlt and actual melt CI render, test for video+audio streams in latest workflow.
+- PySceneDetect: تکمیل و آزموده‌شده — 0.7.2 scene segmentation with single-scene fallback.
+- Auto-Editor: تکمیل و آزموده‌شده — official 31.8.0 CLI used in GitHub Actions Ubuntu 24.04, not compatible with current Debian 12 sandbox GLIBC.
+- Whisper.cpp: تکمیل و آزموده‌شده — v1.9.5 built on CI, real tiny.en model inference and optional .srt artifact. No on-video captions by default.
+- Vid.Stab: تکمیل و آزموده‌شده — real 2-pass render.
+- OpenColorIO: تکمیل و آزموده‌شده — 2.6.0 real LUT baking and apply.
+- OpenTimelineIO: تکمیل و آزموده‌شده — 0.18.1 editable .otio round trip with separate audio track.
+- frei0r: تکمیل و آزموده‌شده — official distribution plugin in GitHub CI for actual filter render.
+
+Source files added: studio_backends.py, studio_pro.py, doctor_pro.py, tests/test_professional_pipeline.py, tests/test_doctor_pro.py, requirements-professional.txt, docs/PRO_RUNBOOK.md, docs/TOOLS_AND_LICENSES.md and GitHub Actions pro-backends.yml. neural_video.py patched for correct RIFE-v4 and Real-ESRGAN model folders. Default output remains textless and customer source files are protected by SHA256 input checks.
+
+Evidence: 25/25 local test suite PASS. Previous CI completed success for Pro toolchain (all 3 jobs including auto-editor, MLT/frei0r, whisper), integrated cinema, Verify cinematic studio, and real AI/Blender smoke. Check latest .github/workflows run for exact main head status and artifacts; workflow runs triggered by each commit may still be pending.
+
+Unresolved commercial-release gates: true 1080p sustained RIFE+Real-ESRGAN throughput without dedicated GPU, human quality evaluation against varied real footage, full data retention/privacy and copyright/legal review, release packaging and installation on final commercial host, public service availability and scaling. No paid provider or customer-side install authorized.
+
+Recovery instructions: fetch main, inspect this STATUS.md and docs/PRO_RUNBOOK.md, run Python 3.12 with requirements-professional.txt and python -m unittest discover -s tests -v, inspect pro-backends.yml / other Actions logs, then continue only failing acceptance areas. Preserve customer media outside Git, never claim automated background work.

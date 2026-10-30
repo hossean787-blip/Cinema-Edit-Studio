@@ -1,3 +1,19 @@
+# Cinema Edit Studio — 12-engine professional chat workflow
+
+**Primary executable:** studio_pro.py — receive clips in ChatGPT, render with assistant-hosted tools, return H.264/AAC MP4 without installing an application on the user's device.
+
+**Quick command (execution-host only):**
+
+    python studio_pro.py shot1.mp4 shot2.mp4 -o export/reel.mp4 --seconds 12 --width 1080 --height 1920 --style sport --scene-detect --stabilize
+
+**Installed/tested dependencies:** FFmpeg, RIFE, Real-ESRGAN, Blender, MLT, PySceneDetect, Auto-Editor, whisper.cpp, Vid.Stab, OpenColorIO, OpenTimelineIO and frei0r. Optional AI and 3D features are enabled only when the corresponding executable/model exists; default workflow remains usable without GPU.
+
+**Key files:** [usage & limitations](docs/PRO_RUNBOOK.md), [upstream versions and licensing](docs/TOOLS_AND_LICENSES.md), [live progress and recovery](STATUS.md), [GitHub CI](.github/workflows/pro-backends.yml).
+
+**Release gate:** An operational tested backend is not by itself a commercial-ready released product. Long-footage performance, model output quality, target device compatibility and third-party redistribution rights must still be accepted.
+
+---
+
 # Cinema Edit Studio — Chat-first edition
 
 **Main entry point:** `cinema_integrated.py`. The user only uploads videos to the conversation; the assistant can process them in its available execution environment and return MP4. No software needs installing on the user's device.
