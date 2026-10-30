@@ -7,6 +7,7 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
@@ -139,6 +140,16 @@ class WorkspaceTests(unittest.TestCase):
             urllib.request.urlopen(origin)
         self.assertEqual(cm.exception.code,400)
 
+
+    def test_missing_optional_video_backends_do_not_break_base(self):
+        output=self.root/"fallback.mp4"
+        with patch("timeline_render.export_otio",side_effect=ImportError("not installed")), \
+             patch("studio_backends.stabilize",side_effect=RuntimeError("filter unavailable")):
+            result=render_timeline([{"file":str(self.input),"start":0,"duration":1.0,"speed":1.0}],
+                        output,resolution=(160,288),fps=24,stabilize=True)
+        self.assertTrue(result["qa"]["decoded"])
+        self.assertEqual(len(result["warnings"]),2)
+        self.assertTrue(output.is_file())
 
     def test_optional_blender_failure_keeps_base_video(self):
         p=self.studio.create()
