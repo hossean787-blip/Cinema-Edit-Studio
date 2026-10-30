@@ -76,6 +76,24 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(export.with_suffix(".mlt").exists())
         self.assertEqual(self.input.stat().st_size,len(self.input.read_bytes()))
 
+    def test_cross_filesystem_safe_publication(self):
+        import os
+        output=self.root/"safe_publication.mp4"
+        real_replace=os.replace
+        calls=[]
+        def check_replace(src,dst):
+            if Path(dst)==output:
+                calls.append((Path(src),Path(dst)))
+                self.assertEqual(Path(src).parent,output.parent)
+            return real_replace(src,dst)
+        with patch('timeline_render.os.replace',side_effect=check_replace):
+            result=render_timeline([{'file':str(self.input),'start':0,
+                           'duration':1.1,'speed':1.0}],output,
+                           resolution=(160,288),fps=24)
+        self.assertTrue(result['qa']['decoded'])
+        self.assertEqual(len(calls),1)
+        self.assertFalse(list(self.root.glob('*.partial')))
+
     def test_multi_clip_save_order_and_empty_timeline(self):
         project=self.studio.create('Multiple videos')
         for i in range(3):
@@ -147,6 +165,8 @@ class WorkspaceTests(unittest.TestCase):
     def test_ui_range_and_cross_origin_rejected(self):
         result=self.request("/")
         self.assertIn(b"CINEMA EDIT STUDIO",result)
+        self.assertIn(b"favicon.svg",result)
+        self.assertIn(b"<svg",self.request("/favicon.svg"))
         self.assertIn(b"timeline",result.lower())
         origin=urllib.request.Request(self.base+"/api/projects",
                     data=b'{"title":"X"}',method="POST",
