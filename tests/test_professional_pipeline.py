@@ -25,6 +25,16 @@ class ProfessionalTests(unittest.TestCase):
         shots=[{'file':str(self.src),'start':0.2,'duration':1.3}]
         otio=export_otio(shots,self.root/'editable.otio')
         xml=export_mlt(shots,self.root/'editable.mlt')
+        # Persist two separate tracks when user supplies an audio file.
+        audio=self.root/'music.wav'
+        subprocess.run(['ffmpeg','-v','error','-y','-f','lavfi','-i',
+                        'sine=frequency=440:sample_rate=44100','-t','3',str(audio)],check=True)
+        multi=export_mlt(shots,self.root/'multi.mlt',music=audio)
+        multi_otio=export_otio(shots,self.root/'multi.otio',music=audio)
+        import xml.etree.ElementTree as et
+        self.assertEqual(len(et.parse(str(multi)).findall('.//tractor/track')),2)
+        import opentimelineio as ot
+        self.assertEqual(len(ot.adapters.read_from_file(str(multi_otio)).tracks),2)
         import opentimelineio as ot
         timeline=ot.adapters.read_from_file(str(otio))
         self.assertEqual(len(timeline.tracks[0]),1)
