@@ -186,6 +186,37 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(len(result["warnings"]),2)
         self.assertTrue(output.is_file())
 
+    def test_ai_missing_models_fallback_and_recover(self):
+        project=self.studio.create('Model fallback')
+        self.studio.upload(project['id'],io.BytesIO(self.input.read_bytes()),
+            self.input.stat().st_size,'source.mp4')
+        p=self.studio.read(project['id'])
+        p['settings'].update(width=160,height=288,fps=24,rife=True,realesrgan=True)
+        self.studio.save(project['id'],{'settings':p['settings']})
+        unavailable={'rife':False,'realesrgan':False,'blender':False,'ffmpeg':True}
+        with patch.object(self.studio,'capabilities',return_value=unavailable):
+            job=self.studio.enqueue(project['id'])
+            for _ in range(130):
+                state=self.studio.job(job['id'])
+                if state['status'] in ('done','failed'):break
+                time.sleep(.12)
+        self.assertEqual(state['status'],'done',str(state))
+        self.assertIn('rife',state['error'])
+        self.assertIn('realesrgan',state['error'])
+        output=self.studio._project_dir(project['id'])/'exports'/(job['id']+'.mp4')
+        self.assertTrue(output.is_file())
+        self.assertGreater(output.stat().st_size,1000)
+        # Recovery on a host with missing AI still accepts valid base dimensions.
+        self.studio._update(job['id'],status='running')
+        with patch.object(self.studio,'capabilities',return_value=unavailable):
+            self.studio._update(job['id'],status='queued')
+            self.studio.pending.put(job['id'])
+            for _ in range(60):
+                recovered=self.studio.job(job['id'])
+                if recovered['status']=='done':break
+                time.sleep(.12)
+        self.assertEqual(recovered['status'],'done',str(recovered))
+
     def test_optional_blender_failure_keeps_base_video(self):
         p=self.studio.create()
         self.studio.upload(p["id"],io.BytesIO(self.input.read_bytes()),
