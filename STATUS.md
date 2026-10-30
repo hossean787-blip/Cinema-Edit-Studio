@@ -42,3 +42,15 @@ GitHub Actions: runner availability depends on account limits and billing; no su
 - Access to a CUDA/Vulkan GPU and Blender executable has not been established; heavy model tests and Blender animation output are still pending.
 - No claim of complete operational deployment or finished AI enhancement is supported.
 - Next action: inspect the Actions tab for Verify cinematic studio, obtain run logs; then repair reported failures.
+
+
+## Integrated chat-first milestone — 2026-10-30 (latest)
+- Added `cinema_integrated.py`, consolidating offline music analysis, visual shot scoring, speed ramps, FFmpeg motion interpolation, transition filters, color processing, original synth music or licensed user music, and full-decode MP4 verification.
+- Four local tests passed: generated music/beat detection, real synthetic end-to-end render with audio and no captions, user-supplied soundtrack mode, and safety validations. Tests also committed in `tests/test_cinema_integrated.py`.
+- Rendered five real user-provided clips from this conversation: first 720×1280 version 8.27 sec / 10 shots, then timing-corrected 8.77 sec / 10 shots, H.264+AAC. Full decoding succeeded.
+- Produced 1080×1920 30-fps upscaled version, verified full decode and both media streams. Resizing does not recover missing optical detail.
+- Fixed FFmpeg afade numerical duration parsing and compensating shot overlap duration, both detected in real renders.
+- Additions to GitHub main confirmed by refetching 5 key files. CI combined status returned empty; GitHub Actions outcome not verified.
+- RIFE, Real-ESRGAN GPU inferencing and Blender actual 3D rendering remain *unverified and not activated* (GPU / binaries absent). No paid services configured. Blender template and adapters exist as separate optional components.
+- Application is an assistant-invoked rendering engine, not an asynchronous perpetual service and not a finished commercial NLE.
+- User-side installation requirement: none. Rendering runtime needs FFmpeg, which is available in this chat's execution environment.
