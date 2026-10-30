@@ -150,3 +150,14 @@ Start from confirmed `main` revision `c9e9a928adfaf06127e15a20cfaa78d6279af9ac`.
 **متوقف به‌دلیل مانع:** No persistent cloud server/domain/account connection or permission available to provision a private origin and Access credentials; current sandbox cannot resolve github.com for git clone. No publicly reachable authenticated HTTPS URL was created. Cloudflare Free proxied HTTP requests are limited to 100 MB; current app allows up to 1 GiB locally, but lacks chunk/resume upload. This remote upload acceptance requirement is not met. Full final 3-video + music user device acceptance and published sample MP4 for this deployment are not claimed.
 
 **Next actions:** authorize/connect a persistent free-capable host and Cloudflare account/domain or another private browser-access mechanism; run check-private-host.sh, set deny-by-default Access and verify unauthenticated rejection; inspect latest Actions jobs and artifact; perform full 12-step real client acceptance and use the failure logs to fix only necessary code. Do not expose loopback without authentication.
+
+
+## 2026-10-31 — Render Free containerized private beta (current task)
+
+**تکمیل و آزموده‌شده (GitHub content verification only):** Added mandatory Basic authentication guard to every `studio_web.py` GET/POST endpoint, rejected public bind without sufficiently long Render-injected credentials, Dockerfile with FFmpeg + FFprobe and non-root process, .dockerignore, `docs/RENDER_FREE.md`, and regression source `tests/test_render_auth.py`. Added the auth test to `web-studio.yml`. All changes committed directly to main. External runtime or security-penetration test has NOT been performed from this session.
+
+**در حال اجرا:** inspect CI run results and deploy actual Docker service with user-controlled Render credentials; perform browser auth and functional render smoke on deployed instance. Chrome 109 remains untested.
+
+**متوقف به‌دلیل مانع:** Render account instance and environment variables can be configured only by the owner; external domain and authentic cloud instance are not connected here. Container git clone in current execution environment failed with `Could not resolve host: github.com`. Render Free 512 MiB / 0.1 CPU and ephemeral disk means sustained video render and persistence are not guaranteed. Do not upload confidential videos to this temporary trial.
+
+**Next user action:** on Render configuration page switch Language from Python 3 to Docker; keep branch main and Free compute, leave Root Directory blank, use default Dockerfile, set CINEMA_AUTH_USER and CINEMA_AUTH_PASSWORD (random unique 20+ chars) only in Render environment variables, then Deploy Web Service. Do not send password in chat.
