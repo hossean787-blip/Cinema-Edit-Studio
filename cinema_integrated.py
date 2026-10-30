@@ -205,7 +205,7 @@ def render(clips, output, music=None, seconds=12, width=720, height=1280,
         shots=[]
         for i,item in enumerate(plan):
             part=folder/f'shot_{i:03d}.mp4'
-            segment(item['path'],item['start'],item['seconds'],part,width,height,fps,style,interpolate)
+            segment(item['path'],item['start'],item['seconds'] + (fade if i<len(plan)-1 else 0),part,width,height,fps,style,interpolate)
             shots.append(part)
         joined=folder/'joined.mp4'
         merge(shots,joined,fade,width,height,fps)
