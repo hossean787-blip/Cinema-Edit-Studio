@@ -19,13 +19,24 @@ async function main() {
  const issues=[];
  page.on('pageerror',e=>issues.push(e.message));
  page.on('console',m=>{if(m.type()==='error')issues.push(m.text())});
+ page.on('response',r=>{if(r.status()>=400)issues.push('HTTP '+r.status()+' '+r.url())});
  try{
    await page.goto(origin,{waitUntil:'domcontentloaded'});
    await page.waitForSelector('.project-item',{timeout:20000});
    assert.match(await page.title(),/CINEMA EDIT STUDIO/);
    await page.locator('#new').click();
-   await page.locator('#upload').setInputFiles([source,source]);
-   await page.waitForFunction(()=>document.querySelectorAll('[data-shot]').length>=2,null,{timeout:35000});
+   await page.locator('#upload').setInputFiles(source);
+   await page.waitForFunction(()=>document.querySelectorAll('[data-shot]').length>=1,null,{timeout:30000});
+   await page.locator('#upload').setInputFiles({name:'clip_second.mp4',mimeType:'video/mp4',
+     buffer:fs.readFileSync(source)});
+   try {
+     await page.waitForFunction(()=>document.querySelectorAll('[data-shot]').length>=2,null,{timeout:30000});
+   } catch(e) {
+     console.error('Upload diagnostics:',{shots:await page.locator('[data-shot]').count(),
+       uploadStatus:await page.locator('#upload-status').textContent(),
+       footer:await page.locator('#footer-status').textContent(),errors:issues});
+     throw e;
+   }
    await page.locator('[data-shot="1"]').click();
    await page.locator('#cspeed').fill('0.7');
    await page.locator('#cspeed').dispatchEvent('change');
