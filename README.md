@@ -1,3 +1,20 @@
+# Cinema Edit Studio — Chat-first edition
+
+**Main entry point:** `cinema_integrated.py`. The user only uploads videos to the conversation; the assistant can process them in its available execution environment and return MP4. No software needs installing on the user's device.
+
+**One-command example:**
+```bash
+python cinema_integrated.py input1.mp4 input2.mov -o output/reel.mp4 --seconds 12 --width 720 --height 1280 --style sport
+```
+
+Current integrated workflow: shot scoring, music onset detection, beat edits, speed ramps, FFmpeg optical-flow slow motion, cinematic color, dynamic-camera effect, xfade transitions, original instrumental synthesis or supplied licensed soundtrack, H.264/AAC export and full-decode QA. No on-screen text is added.
+
+**Verified locally 2026-10-30:** four tests passed; a 5-clip 720×1280 reel rendered and decoded successfully. See [chat workflow and limitations](docs/CHAT_ONLY.md) and [integrated tests](tests/test_cinema_integrated.py).
+
+**Not verified or activated:** actual neural RIFE / Real-ESRGAN GPU models, Blender rendering, Windows 7 installation, and GitHub Actions success. This is a usable chat-render backend, not a commercial release.
+
+---
+
 # Cinema Edit Studio
 
 Independent cinematic reel editing project.
