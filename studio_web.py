@@ -159,7 +159,7 @@ class Studio:
                 obj["media"].append(item)
                 if metadata["type"]=="video":
                     obj["shots"].append({"media":id_media,"ramp":False,"start":0,
-                        "duration":round(min(metadata["duration"],2.5),2),"speed":1.0})
+                        "duration":round(min(metadata["duration"],300),3),"speed":1.0})
                 elif not obj["music"]:obj["music"]=id_media
                 obj["updated"]=time.time()
                 self._atomic_write(p/"project.json",obj)
