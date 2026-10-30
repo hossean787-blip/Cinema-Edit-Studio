@@ -184,7 +184,7 @@ def verify(path, w, h, audio=True):
             'width':w,'height':h,'decoded':True,'no_text':True}
 
 def render(clips, output, music=None, seconds=12, width=720, height=1280,
-           fps=30, style='sport', interpolate=True, fade=.08, verify_output=True):
+           fps=30, style='sport', interpolate=True, fade=.08, verify_output=True, intro_3d=False):
     if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
         raise RuntimeError('FFmpeg / FFprobe are required in render environment')
     clips=[Path(c).resolve() for c in clips]
@@ -207,6 +207,18 @@ def render(clips, output, music=None, seconds=12, width=720, height=1280,
             part=folder/f'shot_{i:03d}.mp4'
             segment(item['path'],item['start'],item['seconds'] + (fade if i<len(plan)-1 else 0),part,width,height,fps,style,interpolate)
             shots.append(part)
+        if intro_3d:
+            from tire_3d_cpu import create as make_3d_intro
+            raw_intro=folder/'3d_raw.mp4'
+            intro_w=min(width,320)
+            intro_h=max(64,round(intro_w*height/width/2)*2)
+            make_3d_intro(raw_intro,seconds=1.0,width=intro_w,height=intro_h,fps=fps)
+            formatted=folder/'3d_intro.mp4'
+            run(['ffmpeg','-v','error','-y','-i',raw_intro,'-an','-vf',
+                 f'scale={width}:{height}:flags=lanczos,fps={fps},format=yuv420p',
+                 '-c:v','libx264','-preset','veryfast','-crf',21,
+                 '-video_track_timescale',30000,formatted])
+            shots.insert(0,formatted)
         joined=folder/'joined.mp4'
         merge(shots,joined,fade,width,height,fps)
         joined_duration=probe(joined)[0]
@@ -218,6 +230,7 @@ def render(clips, output, music=None, seconds=12, width=720, height=1280,
     return {'file':str(output),'shots':len(plan),'style':style,'source_videos':len(clips),
             'music_source':'provided' if music else 'original generated',
             'interpolation':'ffmpeg optical flow' if interpolate else 'simple fps',
+            'procedural_3d_intro':intro_3d,
             'note':'No neural AI or Blender 3D was run; upscaling cannot restore all source detail.',
             'quality':stats}
 
@@ -232,7 +245,8 @@ def main():
     p.add_argument('--fps',type=int,default=30)
     p.add_argument('--style',choices=['sport','cinematic','clean'],default='sport')
     p.add_argument('--no-optical-flow',action='store_true')
+    p.add_argument('--three-d-intro',action='store_true')
     args=p.parse_args()
     print(json.dumps(render(args.clips,args.output,args.music,args.seconds,args.width,args.height,
-                            args.fps,args.style,not args.no_optical_flow),ensure_ascii=False,indent=2))
+                            args.fps,args.style,not args.no_optical_flow,intro_3d=args.three_d_intro),ensure_ascii=False,indent=2))
 if __name__=='__main__':main()
