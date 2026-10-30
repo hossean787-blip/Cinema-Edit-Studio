@@ -1,16 +1,17 @@
-name: Test cinematic reel engine
+name: Verify cinematic studio
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,5 +21,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-      - name: Run unit and synthetic render tests
+      - name: Dependency diagnostics
+        run: python doctor.py | tee doctor-report.json
+      - name: Run comprehensive test suite
         run: python -m unittest discover -s tests -v
+      - name: Python source syntax validation
+        run: python -m compileall -q -x 'blender_scene.py' .
+      - name: Upload diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: doctor-report
+          path: doctor-report.json
+          if-no-files-found: ignore
+          retention-days: 3
