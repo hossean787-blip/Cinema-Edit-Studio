@@ -73,7 +73,9 @@ class Studio:
         self.closed=True
         if self.worker_thread is not None:
             self.pending.put(None)
-            self.worker_thread.join(timeout=3)
+            self.worker_thread.join(timeout=5)
+            # Never close the shared connection while an in-flight render needs it.
+            if self.worker_thread.is_alive():return
         with self.lock:self.db.close()
 
 
@@ -92,9 +94,9 @@ class Studio:
         (p/"exports").mkdir()
         obj={"id":id,"title":str(title)[:80] or "پروژه جدید",
              "created":time.time(),"updated":time.time(),"media":[],"shots":[],
-             "music":None,"settings":{"width":720,"height":1280,"fps":30,
+             "music":None,"overlay":None,"settings":{"width":720,"height":1280,"fps":30,
              "style":"sport","transition":0.12,"optical_flow":True,
-             "stabilize":False,"rife":False,"realesrgan":False,"auto":False}}
+             "stabilize":False,"rife":False,"realesrgan":False,"blender":False,"auto":False}}
         self._atomic_write(p/"project.json",obj)
         return obj
 
@@ -182,12 +184,22 @@ class Studio:
                 raise ValueError("ابعاد خروجی نامعتبر")
             if settings["fps"] not in (24,25,30,60):raise ValueError("نرخ فریم نامعتبر")
             if not 0<=float(settings["transition"])<=.5:raise ValueError("ترنزیشن نامعتبر")
-            for k in ("rife","realesrgan","stabilize","optical_flow","auto"):
+            for k in ("rife","realesrgan","blender","stabilize","optical_flow","auto"):
                 if type(settings[k]) is not bool:raise ValueError("گزینه نامعتبر")
             music=data.get("music",obj["music"])
             if music is not None and (music not in allowed or allowed[music]["type"]!="audio"):
                 raise ValueError("شناسه موسیقی نامعتبر")
-            obj.update(shots=cleaned,settings=settings,music=music,
+            overlay=data.get("overlay",obj.get("overlay"))
+            if overlay is not None:
+                if not isinstance(overlay,dict):raise ValueError("لایه تصویر نامعتبر است")
+                mid=overlay.get("media")
+                if mid not in allowed or allowed[mid]["type"]!="video":raise ValueError("شناسه لایه دوم نامعتبر است")
+                at=float(overlay.get("at",0));length=float(overlay.get("duration",2))
+                scale=float(overlay.get("scale",.3));position=overlay.get("position","top-left")
+                if not all(map(math.isfinite,(at,length,scale))) or at<0 or length<=0 or length>120 or not .15<=scale<=.60 or position not in ("top-left","top-right","bottom-left","bottom-right"):
+                    raise ValueError("موقعیت یا ابعاد لایه دوم نامعتبر است")
+                overlay={"media":mid,"at":at,"duration":length,"scale":scale,"position":position}
+            obj.update(shots=cleaned,settings=settings,music=music,overlay=overlay,
                        title=str(data.get("title",obj["title"]))[:80],updated=time.time())
             self._atomic_write(self._project_dir(id)/"project.json",obj)
         return obj
@@ -226,6 +238,13 @@ class Studio:
         if x["status"]=="done":x["video_url"]=f"/api/projects/{x['project']}/exports/{id}.mp4"
         return x
 
+    def project_jobs(self,id):
+        self.read(id)
+        with self.lock:
+            ids=self.db.execute(
+                "SELECT id FROM jobs WHERE project=? ORDER BY created DESC LIMIT 12",(id,)).fetchall()
+        return [self.job(x[0]) for x in ids]
+
     def retry(self,id):
         with self.lock:
             j=self.job(id)
@@ -263,6 +282,9 @@ class Studio:
                 for file in files.values():
                     if file.resolve().parent != media_dir:raise ValueError("Unsafe media path in project")
                 settings=obj["settings"];music=files[obj["music"]] if obj["music"] else None
+                layer=obj.get("overlay")
+                if layer:
+                    layer=dict(layer,file=str(files[layer["media"]]))
                 if settings["rife"] or settings["realesrgan"]:
                     caps=self.capabilities()
                     if (settings["rife"] and not caps["rife"]) or (settings["realesrgan"] and not caps["realesrgan"]):
@@ -288,8 +310,28 @@ class Studio:
                     result=render_timeline(shots,output,resolution=(settings["width"],settings["height"]),
                         fps=settings["fps"],style=settings["style"],transition=settings["transition"],
                         music=music,optical_flow=settings["optical_flow"],
-                        stabilize=settings["stabilize"],on_progress=progress)
+                        stabilize=settings["stabilize"],overlay=layer,on_progress=progress)
+                if settings.get("auto") and layer:
+                    from timeline_render import apply_overlay_video
+                    layered=directory/"exports"/(jid+"-layered.mp4")
+                    apply_overlay_video(output,layer["file"],layered,settings["width"],settings["height"],
+                                        at=layer["at"],duration=layer["duration"],
+                                        scale=layer["scale"],position=layer["position"])
+                    os.replace(layered,output)
                 ai_warnings=[]
+                if settings.get("blender"):
+                    try:
+                        from blender_composite import append_blender_scene
+                        binary=os.environ.get("BLENDER_BIN") or shutil.which("blender")
+                        if not binary:raise RuntimeError("Blender executable missing")
+                        enhanced=directory/"exports"/(jid+"-blender.mp4")
+                        self._update(jid,progress=92,detail="رندر صحنه واقعی Blender")
+                        append_blender_scene(output,enhanced,binary,settings["width"],
+                                             settings["height"],settings["fps"])
+                        os.replace(enhanced,output)
+                    except Exception as blender_error:
+                        (directory/"exports"/(jid+"-blender.mp4")).unlink(missing_ok=True)
+                        ai_warnings.append("Blender: "+str(blender_error)[:200])
                 if settings["rife"] or settings["realesrgan"]:
                     from neural_video import process
                     for backend in ("rife","realesrgan"):
@@ -334,6 +376,8 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:self.send({"error":"خطای سرور"},500)
 
     def _get(self):
+        if self.headers.get("Sec-Fetch-Site","")=="cross-site":
+            raise ValueError("دسترسی بین‌سایتی مجاز نیست")
         path=urlsplit(self.path).path;parts=path.strip("/").split("/")
         studio=self.server.studio
         if path in ("/","/index.html"):
@@ -346,6 +390,8 @@ class Handler(BaseHTTPRequestHandler):
         if path=="/api/capabilities":return self.send(studio.capabilities())
         if len(parts)==3 and parts[:2]==["api","projects"]:
             return self.send(studio.read(parts[2]))
+        if len(parts)==4 and parts[:2]==["api","projects"] and parts[3]=="jobs":
+            return self.send({"jobs":studio.project_jobs(parts[2])})
         if len(parts)==3 and parts[:2]==["api","jobs"]:return self.send(studio.job(parts[2]))
         if len(parts)==5 and parts[:2]==["api","projects"] and parts[3]=="media":
             obj=studio.read(parts[2])
@@ -393,6 +439,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             origin=self.headers.get("Origin","")
             host=self.headers.get("Host","")
+            if self.headers.get("Sec-Fetch-Site","")=="cross-site":
+                raise ValueError("درخواست بین‌سایتی مجاز نیست")
             if origin and origin not in ("http://"+host,"https://"+host):
                 raise ValueError("درخواست از مبدأ دیگری مجاز نیست")
             path=urlsplit(self.path);parts=path.path.strip("/").split("/")
