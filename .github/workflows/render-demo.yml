@@ -1,0 +1,25 @@
+name: Render synthetic demo
+on:
+  workflow_dispatch:
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Generate safe synthetic sample
+        run: |
+          mkdir -p demo
+          ffmpeg -v error -y -f lavfi -i testsrc2=size=360x640:rate=24 -t 4 -c:v libx264 -pix_fmt yuv420p demo/shot.mp4
+          printf '{"resolution":[360,640],"fps":24,"shots":[{"file":"shot.mp4","start":0,"duration":2,"speed":1},{"file":"shot.mp4","start":2,"duration":2,"speed":0.5}]}' > demo/demo.json
+          python studio.py demo/demo.json -o demo/render.mp4
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 demo/render.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cinematic-demo-mp4
+          path: demo/render.mp4
+          retention-days: 3
