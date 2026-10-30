@@ -28,7 +28,9 @@ from cinema_integrated import verify as verify_video
 ROOT_UI=Path(__file__).parent/"web"/"index.html"
 VIDEO_SUFFIXES={".mp4",".mov",".mkv",".webm",".avi"}
 AUDIO_SUFFIXES={".mp3",".m4a",".wav",".ogg",".flac"}
-MAX_UPLOAD=1024*1024*1024
+# Host-level bounds prevent mobile uploads from exhausting the small Render Free disk.
+MAX_UPLOAD=int(os.environ.get("CINEMA_MAX_UPLOAD_MB","1024"))*1024*1024
+MAX_WORKSPACE=int(os.environ.get("CINEMA_MAX_WORKSPACE_MB","0"))*1024*1024
 MAX_JSON=256*1024
 
 def media_metadata(path):
@@ -129,6 +131,13 @@ class Studio:
         p=self._project_dir(id)
         obj=self.read(id)
         if length<=0 or length>MAX_UPLOAD:raise ValueError("حجم فایل خارج از محدوده است")
+        if MAX_WORKSPACE:
+            with self.lock:
+                used=sum(f.stat().st_size for f in self.projects.rglob("*") if f.is_file())
+                if used+length>MAX_WORKSPACE:
+                    raise ValueError("فضای اختصاص‌یافته به پروژه‌ها پر شده است؛ از فایل‌های کوچک‌تر استفاده کنید")
+        if shutil.disk_usage(p).free<length+20*1024*1024:
+            raise ValueError("فضای دیسک برای آپلود کافی نیست")
         title=Path(str(name).replace("\\","/")).name[:120]
         suffix=Path(title).suffix.lower()
         if suffix not in VIDEO_SUFFIXES|AUDIO_SUFFIXES:raise ValueError("پسوند فایل مجاز نیست")
