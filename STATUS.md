@@ -137,3 +137,16 @@ Start from confirmed `main` revision `c9e9a928adfaf06127e15a20cfaa78d6279af9ac`.
 **متوقف به‌دلیل مانع:** commercial/public deployment (no authorized persistent private host, TLS/auth, real GPU/long 4K acceptance, Windows 7 Chrome 109 device test, audited model and third-party license rights). Do not call this a publicly hosted or commercial-final product. Preserve user source videos outside Git.
 
 **Recovery:** On `main`, read this section and `docs/RELEASE_CANDIDATE_QA.md`. Run full tests, check latest GitHub Actions results, download GitHub Actions host bundle, restore ZIP to clean Linux, then run `sh packaging/launch-host.sh`. No automatic background work is implied without an active authorized scheduler.
+
+
+## 2026-10-31 — Private operational beta deployment checkpoint
+
+**Verified directly from connected GitHub main:** initial observed head was `1588bb96b0385ac968fe545307ebb0d71e55b8b3`; inspected existing `studio_web.py`, `web-studio.yml`, `packaging/launch-host.sh`, `tests/browser_qa_playwright.js`, and `docs/WEB_STUDIO.md`. Existing render features and successful earlier browser checks remain unchanged.
+
+**تکمیل و آزموده‌شده (repository writes only):** Added `packaging/check-private-host.sh` (prerequisite and local private HTTP health checks) and `docs/PRIVATE_BETA_DEPLOYMENT.md` (Cloudflare Access + Tunnel architecture, Ubuntu host setup, security and acceptance checklist, real browser/device gates). Both files committed directly to main and verified from GitHub. This is documentation/check readiness, not a tested deployment.
+
+**در حال اجرا:** host ZIP is defined by existing GitHub Actions; download and independent extraction/start/render checks require a confirmed run/artifact or a separate source checkout. Specific Chrome 109/Windows 7 and Android browser tests remain pending.
+
+**متوقف به‌دلیل مانع:** No persistent cloud server/domain/account connection or permission available to provision a private origin and Access credentials; current sandbox cannot resolve github.com for git clone. No publicly reachable authenticated HTTPS URL was created. Cloudflare Free proxied HTTP requests are limited to 100 MB; current app allows up to 1 GiB locally, but lacks chunk/resume upload. This remote upload acceptance requirement is not met. Full final 3-video + music user device acceptance and published sample MP4 for this deployment are not claimed.
+
+**Next actions:** authorize/connect a persistent free-capable host and Cloudflare account/domain or another private browser-access mechanism; run check-private-host.sh, set deny-by-default Access and verify unauthenticated rejection; inspect latest Actions jobs and artifact; perform full 12-step real client acceptance and use the failure logs to fix only necessary code. Do not expose loopback without authentication.
