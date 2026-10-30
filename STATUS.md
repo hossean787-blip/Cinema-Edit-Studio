@@ -175,3 +175,12 @@ Observed user screenshot: remote Android UI loads, but selection/upload does not
 - **Next action:** check the new GitHub Actions run results, deploy latest main image, execute a multi-file upload+music+render in the user browser, then independently verify ZIP, output and resource usage. No production-ready status asserted.
 
 - Docker image CI added in `.github/workflows/render-container-smoke.yml`: build production Dockerfile, start with test-only Basic Auth, check 401 for unauthorized attempts and authenticated FFmpeg capability. Committed directly to main at 0536aa84. **Run result not yet confirmed**; no claim of test success.
+
+## 2026-10-31 — Finalization checkpoint (not commercial release)
+- Most recent inspected main before edits: 35e027f6478a9f90689eeb8a7ab869b6e16eb625.
+- User verified prior deployed basic experience: video upload, preview, 100%-completed job, MP4 download and playback on Android. This is evidence for a one-clip beta workflow only.
+- Added server-side configurable per-file upload and aggregate project workspace limits in `studio_web.py`, a disk-free-space preflight, and Render Docker defaults `CINEMA_MAX_UPLOAD_MB=95` and `CINEMA_MAX_WORKSPACE_MB=350`. Added tests `tests/test_upload_quota.py` and registered CI step. Code commits were pushed to main, but test executions and new Render redeploy have not been confirmed.
+- **تکمیل و آزموده‌شده:** files and commit write-back verified through GitHub API. Previously exercised user Android single-file flow only.
+- **در حال اجرا:** GitHub Actions actual latest run evidence, real three-video+music acceptance, resource consumption checks and Chrome 109 target-device validation.
+- **متوقف به‌دلیل مانع:** Render Free offers nonpersistent storage and 512 MiB RAM / 0.1 CPU; it does not meet the persistent project, large footage and professional video performance requirements. No independently connected durable host, external object storage or licensed cloud GPU was provisioned, and purchase was not authorized.
+- **Delivery gate:** do not label as production/commercial/final. Next: confirm Actions and Render deployment, test three+music with actual device and downloadable MP4, add persistent encrypted storage/backup and restore tests before a final release.
