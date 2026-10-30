@@ -46,7 +46,10 @@ def process(source,destination,backend,executable=None,*,slow_motion=False,scale
               '-fps_mode','passthrough',a/'%08d.png'],timeout)
         originals=pngs(a)
         if len(originals)>max_frames:raise ValueError('Frame budget exceeded')
-        args=[binary,'-i',a,'-o',b]
+        executable_dir=Path(binary).resolve().parent
+        args=[binary,'-i',a,'-o',b,'-g','0','-j','1:1:1']
+        if backend=='rife':args+=['-m',executable_dir/'rife-v4']
+        else:args+=['-m',executable_dir/'models']
         if backend=='rife':args+=['-n',str(len(originals)*2)]
         else:args+=['-s',str(scale),'-n',model]
         if gpu_id is not None:args+=['-g',str(gpu_id)]
