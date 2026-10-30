@@ -21,4 +21,4 @@ jobs:
       - name: Validate integrated source
         run: python -m py_compile cinema_integrated.py
       - name: Test no-install cinematic workflow with synthetic clips
-        run: python -m unittest -v tests.test_cinema_integrated
+        run: python -m unittest discover -s tests -p 'test_cinema_integrated.py' -v
