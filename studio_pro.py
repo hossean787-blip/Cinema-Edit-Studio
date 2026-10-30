@@ -131,7 +131,7 @@ def options_render(source_files,destination,*,music=None,seconds=12,width=720,he
             call(['ffmpeg','-v','error','-y','-i',current,'-i',trailer,
                   '-filter_complex','[0:v]fps=30,format=yuv420p[v0];[1:v]fps=30,format=yuv420p[v1];[v0][v1]concat=n=2:v=1:a=0[v]',
                   '-map','[v]','-map','0:a:0?','-c:v','libx264','-crf','20',
-                  '-c:a','aac','-movflags','+faststart',concat])
+                  '-af','apad','-shortest','-c:a','aac','-movflags','+faststart',concat])
             current=concat
             stages['blender']='executed'
         staged=output.with_name(output.name+'.partial')
@@ -153,6 +153,10 @@ def options_render(source_files,destination,*,music=None,seconds=12,width=720,he
         a_start=float(audios[0].get('start_time',0))
         if abs(v_start-a_start)>.20:raise RuntimeError('Audio/video start times misaligned')
         final['audio_video_start_delta_s']=round(abs(v_start-a_start),3)
+        if 'duration' in videos[0] and 'duration' in audios[0]:
+            delta=abs(float(videos[0]['duration'])-float(audios[0]['duration']))
+            if delta>.25:raise RuntimeError('A/V duration drift above 250 ms')
+            final['audio_video_duration_delta_s']=round(delta,3)
         os.replace(staged,output)
     except Exception:
         if staged.exists():staged.unlink()
