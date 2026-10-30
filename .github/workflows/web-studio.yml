@@ -70,6 +70,8 @@ jobs:
           node --check /tmp/cinema-ui.js
       - name: Real HTTP integration including render, security, persistence, AI auto-mode
         run: python -m unittest discover -s tests -p 'test_web_workspace.py' -v
+      - name: Verify Render authentication and public-bind fail-closed behavior
+        run: python -m unittest discover -s tests -p 'test_render_auth.py' -v
       - name: Create verified no-vendored-binary release ZIP
         run: |
           python - <<'PY'
