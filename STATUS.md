@@ -164,3 +164,12 @@ Start from confirmed `main` revision `c9e9a928adfaf06127e15a20cfaa78d6279af9ac`.
 
 ## 2026-10-31 — Mobile upload diagnosis
 Observed user screenshot: remote Android UI loads, but selection/upload does not visibly complete. Previous UI cleared `#upload-status` unconditionally after every attempt and only reported errors in the offscreen footer. This concealed the reason for a failed upload. Changed `web/index.html` on main to retain explicit success/failure status, show XHR upload progress, and reject files over 95 MiB before hitting the Render Free request limit; disabled file input during transfer to avoid overlapping requests. No claim of server-side resolution until user redeploys and tests a short small MP4. Render Free 512 MiB may still OOM and ephemeral files remain non-durable.
+
+## 2026-10-31 — Multi-media beta acceptance expansion
+- User confirmed actual Render Free browser upload, timeline preview, 100% render, downloaded and played MP4 (one test clip). This evidence supports the basic end-to-end single-file flow, not persistent hosting or heavy-video performance.
+- Committed `tests/test_three_video_music_acceptance.py`: synthetic **three distinct H.264 video files + separate WAV soundtrack**, library/media validation, reverse shot order, timeline save, FFmpeg render queue to completion, stream validation, full MP4 decode, SHA256 preservation of input assets and restart/recovery test. This must execute in CI before reporting it as passed.
+- Updated `.github/workflows/web-studio.yml` to gate the web-editor job on this regression test.
+- Updated Render `Dockerfile` to install pinned `opentimelineio==0.18.1` for optional editable OTIO sidecar; this should remove the prior missing-module warning if the image builds and redeploys, and requires runtime confirmation.
+- **در حال اجرا:** CI/build evidence and redeployment to Render Free. Latest production instance cannot be controlled directly from this GitHub-only session.
+- **متوقف به‌دلیل مانع:** Render Free ephemeral disk, 512 MiB memory and 0.1 CPU do not satisfy persistent professional video processing. End-user Chrome 109 and Android multi-file render/download remain untested; neither long footage nor AI GPU models are certified.
+- **Next action:** check the new GitHub Actions run results, deploy latest main image, execute a multi-file upload+music+render in the user browser, then independently verify ZIP, output and resource usage. No production-ready status asserted.
