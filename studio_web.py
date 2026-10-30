@@ -313,27 +313,33 @@ class Studio:
                     verify_video(output,actual_width,actual_height)
                     self._update(jid,status="done",progress=100,detail="بازیابی خروجی قبلی تأیید شد")
                     continue
+                auto_warnings=[]
+                result=None
                 if settings.get("auto"):
-                    from studio_pro import options_render
-                    inputs=list(dict.fromkeys(s["file"] for s in shots))
-                    result=options_render(inputs,output,music=music,
-                        seconds=max(2,min(60,round(sum(s["duration"]/s["speed"] for s in shots)))),
-                        width=settings["width"],height=settings["height"],fps=settings["fps"],
-                        style=settings["style"],stabilize_input=settings["stabilize"],
-                        detect_scenes=True,interpolate=settings["optical_flow"])
-                else:
+                    try:
+                        from studio_pro import options_render
+                        inputs=list(dict.fromkeys(s["file"] for s in shots))
+                        result=options_render(inputs,output,music=music,
+                            seconds=max(2,min(60,round(sum(s["duration"]/s["speed"] for s in shots)))),
+                            width=settings["width"],height=settings["height"],fps=settings["fps"],
+                            style=settings["style"],stabilize_input=settings["stabilize"],
+                            detect_scenes=True,interpolate=settings["optical_flow"])
+                    except Exception as auto_error:
+                        auto_warnings.append("تدوین خودکار در دسترس نبود؛ تایم‌لاین دستی رندر شد: "+str(auto_error)[:180])
+                        output.unlink(missing_ok=True)
+                if result is None:
                     result=render_timeline(shots,output,resolution=(settings["width"],settings["height"]),
                         fps=settings["fps"],style=settings["style"],transition=settings["transition"],
                         music=music,optical_flow=settings["optical_flow"],
                         stabilize=settings["stabilize"],overlay=layer,on_progress=progress)
-                if settings.get("auto") and layer:
+                if settings.get("auto") and not auto_warnings and layer:
                     from timeline_render import apply_overlay_video
                     layered=directory/"exports"/(jid+"-layered.mp4")
                     apply_overlay_video(output,layer["file"],layered,settings["width"],settings["height"],
                                         at=layer["at"],duration=layer["duration"],
                                         scale=layer["scale"],position=layer["position"])
                     os.replace(layered,output)
-                ai_warnings=list(result.get("warnings",[]))+missing_warnings
+                ai_warnings=list(result.get("warnings",[]))+missing_warnings+auto_warnings
                 if settings.get("blender"):
                     try:
                         from blender_composite import append_blender_scene
