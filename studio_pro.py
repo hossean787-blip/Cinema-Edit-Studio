@@ -69,11 +69,11 @@ def options_render(source_files,destination,*,music=None,seconds=12,width=720,he
             shot_manifest.append({'file':str(src),'start':0.0,'duration':min(2.0,duration)})
         if with_otio:
             saved=output.with_suffix('.otio')
-            export_otio(shot_manifest,saved)
+            export_otio(shot_manifest,saved,music=music)
             stages['opentimelineio']=str(saved)
         if with_mlt:
             saved=output.with_suffix('.mlt')
-            export_mlt(shot_manifest,saved)
+            export_mlt(shot_manifest,saved,music=music)
             stages['mlt_xml']=str(saved)
         rendered=tmp/'edited.mp4'
         result=render_cinematic(prepared,rendered,music=music,seconds=seconds,
