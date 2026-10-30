@@ -6,6 +6,43 @@ on:
 permissions:
   contents: read
 jobs:
+  browser-visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser, FFmpeg, and verified browser test dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          npm install --no-save --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Run real Chromium UI test, click render, and collect screenshots
+        run: |
+          export CINEMA_PORT=8877
+          export CINEMA_WORKSPACE="$RUNNER_TEMP/cinema-private-test"
+          sh packaging/launch-host.sh > "$RUNNER_TEMP/cinema-browser-server.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8877/api/projects >/dev/null; then break; fi
+            sleep 1
+          done
+          ffmpeg -v error -y -f lavfi -i testsrc2=size=160x288:rate=24 -t 3.4 -c:v libx264 -pix_fmt yuv420p "$RUNNER_TEMP/browser_video.mp4"
+          CINEMA_URL=http://127.0.0.1:8877 CINEMA_TEST_VIDEO="$RUNNER_TEMP/browser_video.mp4" CINEMA_QA_OUT=qa-browser-artifacts node tests/browser_qa_playwright.js
+      - name: Save actual visual proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinema-browser-visual-qa
+          path: qa-browser-artifacts/
+          if-no-files-found: ignore
+          retention-days: 14
   web-editor:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
