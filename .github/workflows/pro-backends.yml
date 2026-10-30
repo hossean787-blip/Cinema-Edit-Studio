@@ -38,6 +38,9 @@ jobs:
           python -c "from studio_backends import export_mlt; export_mlt([{'file':'sample.mp4','start':0,'duration':1.5}],'timeline.mlt',fps=15,music='music.wav')"
           melt timeline.mlt -consumer avformat:mlt_render.mp4 vcodec=libx264 acodec=aac real_time=-1
           ffprobe -v error -show_entries format=duration -of default=nw=1 mlt_render.mp4
+          ffprobe -v error -show_entries stream=codec_type -of default=nw=1 mlt_render.mp4 | tee streams.txt
+          grep -q 'codec_type=video' streams.txt
+          grep -q 'codec_type=audio' streams.txt
           ffmpeg -v error -xerror -i mlt_render.mp4 -f null -
       - name: Save diagnostic proof
         if: always()
