@@ -42,6 +42,17 @@ class RenderAuthenticationTests(unittest.TestCase):
                     valid={"Authorization":"Basic "+encoded}
                     with urlopen(Request(base+"/api/projects",headers=valid),timeout=5) as response:
                         self.assertEqual(response.status, 200)
+                    # Render dashboard -> editor is a cross-site top-level navigation.
+                    navigation=dict(valid, **{"Sec-Fetch-Site":"cross-site",
+                        "Sec-Fetch-Mode":"navigate","Sec-Fetch-Dest":"document"})
+                    with urlopen(Request(base+"/",headers=navigation),timeout=5) as response:
+                        self.assertEqual(response.status,200)
+                        self.assertIn(b"CINEMA EDIT STUDIO",response.read())
+                    blocked=dict(valid, **{"Sec-Fetch-Site":"cross-site",
+                        "Sec-Fetch-Mode":"cors","Sec-Fetch-Dest":"empty"})
+                    with self.assertRaises(HTTPError) as err:
+                        urlopen(Request(base+"/api/projects",headers=blocked),timeout=5)
+                    self.assertEqual(err.exception.code,400)
                     request=Request(base+"/api/projects",data=b'{"title":"test"}',method="POST",
                                     headers={"Content-Type":"application/json"})
                     with self.assertRaises(HTTPError) as err:
