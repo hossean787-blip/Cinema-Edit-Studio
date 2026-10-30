@@ -184,3 +184,9 @@ Observed user screenshot: remote Android UI loads, but selection/upload does not
 - **در حال اجرا:** GitHub Actions actual latest run evidence, real three-video+music acceptance, resource consumption checks and Chrome 109 target-device validation.
 - **متوقف به‌دلیل مانع:** Render Free offers nonpersistent storage and 512 MiB RAM / 0.1 CPU; it does not meet the persistent project, large footage and professional video performance requirements. No independently connected durable host, external object storage or licensed cloud GPU was provisioned, and purchase was not authorized.
 - **Delivery gate:** do not label as production/commercial/final. Next: confirm Actions and Render deployment, test three+music with actual device and downloadable MP4, add persistent encrypted storage/backup and restore tests before a final release.
+
+## 2026-10-31 — Default render duration defect
+- User reported ~2-second final clip on latest Render deployment. Root cause confirmed in source: `Studio.upload` assigned each newly uploaded video `min(source_duration,2.5)` seconds; media library re-add used the same 2.5-second default. The renderer itself correctly follows timeline shots.
+- **Fixed on main:** both defaults now select source duration, capped at the existing per-project 300-second limit. Added regression assertion for a 3-second synthetic upload in `tests/test_web_workspace.py`.
+- For *existing projects*, already stored 2.5-second timeline trims will not be overwritten: user should create a new project and re-upload or adjust each clip duration manually, then save and re-render.
+- Code is committed; latest CI and new live Render deployment/playback **not yet verified**. Render Free CPU/memory/storage limitations remain.
