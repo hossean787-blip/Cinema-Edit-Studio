@@ -294,17 +294,23 @@ class Studio:
                 layer=obj.get("overlay")
                 if layer:
                     layer=dict(layer,file=str(files[layer["media"]]))
-                if settings["rife"] or settings["realesrgan"]:
-                    caps=self.capabilities()
-                    if (settings["rife"] and not caps["rife"]) or (settings["realesrgan"] and not caps["realesrgan"]):
-                        raise RuntimeError("موتور AI انتخاب‌شده در محیط رندر نصب و تأیید نشده است")
+                caps=self.capabilities()
+                unavailable_models={backend for backend in ("rife","realesrgan")
+                    if settings[backend] and not caps[backend]}
+                missing_warnings=[backend+": موتور اختیاری در این میزبان در دسترس نیست"
+                    for backend in sorted(unavailable_models)]
                 output=directory/"exports"/(jid+".mp4")
                 def progress(n,msg):self._update(jid,progress=n,detail=msg)
                 if output.is_file():
                     # A complete export may predate a power loss while job status was pending.
-                    verify_video(output,
-                        settings["width"]*(2 if settings["realesrgan"] else 1),
-                        settings["height"]*(2 if settings["realesrgan"] else 1))
+                    from cinema_integrated import probe as probe_video
+                    _,actual_width,actual_height=probe_video(output)
+                    allowed_sizes={(settings["width"],settings["height"])}
+                    if settings["realesrgan"]:
+                        allowed_sizes.add((settings["width"]*2,settings["height"]*2))
+                    if (actual_width,actual_height) not in allowed_sizes:
+                        raise ValueError("بازیابی فایل با ابعاد نامعتبر رد شد")
+                    verify_video(output,actual_width,actual_height)
                     self._update(jid,status="done",progress=100,detail="بازیابی خروجی قبلی تأیید شد")
                     continue
                 if settings.get("auto"):
@@ -327,7 +333,7 @@ class Studio:
                                         at=layer["at"],duration=layer["duration"],
                                         scale=layer["scale"],position=layer["position"])
                     os.replace(layered,output)
-                ai_warnings=list(result.get("warnings",[]))
+                ai_warnings=list(result.get("warnings",[]))+missing_warnings
                 if settings.get("blender"):
                     try:
                         from blender_composite import append_blender_scene
@@ -344,7 +350,7 @@ class Studio:
                 if settings["rife"] or settings["realesrgan"]:
                     from neural_video import process
                     for backend in ("rife","realesrgan"):
-                        if not settings[backend]:continue
+                        if not settings[backend] or backend in unavailable_models:continue
                         binary=os.environ.get("RIFE_BIN" if backend=="rife" else "REALESRGAN_BIN") or shutil.which(
                             "rife-ncnn-vulkan" if backend=="rife" else "realesrgan-ncnn-vulkan")
                         tmp=directory/"exports"/(jid+"-"+backend+".mp4")
