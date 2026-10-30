@@ -72,6 +72,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_web_workspace.py' -v
       - name: Verify Render authentication and public-bind fail-closed behavior
         run: python -m unittest discover -s tests -p 'test_render_auth.py' -v
+      - name: Enforce upload and workspace safety quotas
+        run: python -m unittest discover -s tests -p 'test_upload_quota.py' -v
       - name: End-to-end three-video music render and persistent recovery
         run: python -m unittest discover -s tests -p 'test_three_video_music_acceptance.py' -v
       - name: Create verified no-vendored-binary release ZIP
