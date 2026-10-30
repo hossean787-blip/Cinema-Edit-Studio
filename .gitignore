@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated footage, exports, and audio (do not commit private customer videos)
+output/
+render/
+*.mp4
+*.mov
+*.wav
+*.mp3
