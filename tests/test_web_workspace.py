@@ -95,6 +95,17 @@ class WorkspaceTests(unittest.TestCase):
             render_timeline([{"file":str(self.input),"duration":1,"speed":1}],out,
                             resolution=(160,288),fps=24)
 
+    def test_multiple_http_render_requests_consume_request_body(self):
+        project=self.studio.create()
+        for _ in range(6):
+            try:
+                self.request("/api/projects/"+project["id"]+"/render","POST",{})
+            except urllib.error.HTTPError as e:
+                self.assertEqual(e.code,400)
+                self.assertIn("error",json.loads(e.read()))
+            else:
+                self.fail("Empty timeline must be rejected")
+
     def test_ui_range_and_cross_origin_rejected(self):
         result=self.request("/")
         self.assertIn(b"CINEMA EDIT STUDIO",result)
