@@ -14,7 +14,7 @@ output=os.path.abspath(argv[0] if argv else "cinematic_intro.mp4")
 bpy.ops.object.select_all(action="SELECT")
 bpy.ops.object.delete(use_global=False)
 scene=bpy.context.scene
-scene.render.engine="BLENDER_EEVEE_NEXT" if hasattr(bpy.types,"BLENDER_EEVEE_NEXT") else "BLENDER_EEVEE"
+scene.render.engine="BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2, 0) else "BLENDER_EEVEE"
 scene.render.resolution_x=720
 scene.render.resolution_y=1280
 scene.render.resolution_percentage=100
