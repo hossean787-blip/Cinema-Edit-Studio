@@ -4,6 +4,8 @@
 No external hosting, cloud service, subprocess command interpolation or third-party Python dependency.
 """
 import argparse
+import base64
+import hmac
 import hashlib
 import importlib.util
 import json
@@ -391,7 +393,32 @@ class Handler(BaseHTTPRequestHandler):
         n=int(self.headers.get("Content-Length","0"))
         if n<=0 or n>MAX_JSON:raise ValueError("اندازه درخواست نامعتبر است")
         return json.loads(self.rfile.read(n))
+    def _authorized(self):
+        username=os.environ.get("CINEMA_AUTH_USER","")
+        password=os.environ.get("CINEMA_AUTH_PASSWORD","")
+        if not (username and password):
+            return self.client_address[0] in ("127.0.0.1","::1")
+        raw=self.headers.get("Authorization","")
+        try:
+            scheme, token=raw.split(" ",1)
+            supplied=base64.b64decode(token,validate=True).decode("utf-8")
+        except (ValueError,UnicodeError):
+            return False
+        if scheme.lower()!="basic" or ":" not in supplied:return False
+        user,secret=supplied.split(":",1)
+        return hmac.compare_digest(user,username) and hmac.compare_digest(secret,password)
+
+    def _require_auth(self):
+        if self._authorized():return True
+        self.send_response(401)
+        self.send_header("WWW-Authenticate",'Basic realm="Cinema Edit Studio", charset="UTF-8"')
+        self.send_header("Cache-Control","no-store")
+        self.send_header("Content-Length","0")
+        self.end_headers()
+        return False
+
     def do_GET(self):
+        if not self._require_auth():return
         try:self._get()
         except (ValueError,FileNotFoundError) as e:self.send({"error":str(e)},400)
         except Exception:self.send({"error":"خطای سرور"},500)
@@ -464,6 +491,7 @@ class Handler(BaseHTTPRequestHandler):
                 remaining-=len(data)
 
     def do_POST(self):
+        if not self._require_auth():return
         try:
             origin=self.headers.get("Origin","")
             host=self.headers.get("Host","")
@@ -496,6 +524,11 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:self.send({"error":"خطای سرور"},500)
 
 def serve(host="127.0.0.1",port=8765,workspace=None):
+    if host not in ("127.0.0.1","::1","localhost"):
+        if not os.environ.get("CINEMA_AUTH_USER") or not os.environ.get("CINEMA_AUTH_PASSWORD"):
+            raise RuntimeError("Public bind forbidden without CINEMA_AUTH_USER and CINEMA_AUTH_PASSWORD")
+        if len(os.environ["CINEMA_AUTH_PASSWORD"]) < 20:
+            raise RuntimeError("CINEMA_AUTH_PASSWORD must have at least 20 characters")
     root=Path(workspace or (Path.home()/".cinema-edit-studio"))
     server=ThreadingHTTPServer((host,port),Handler)
     server.studio=Studio(root)
@@ -510,5 +543,6 @@ if __name__=="__main__":
     a=argparse.ArgumentParser()
     a.add_argument("--port",type=int,default=8765)
     a.add_argument("--workspace")
+    a.add_argument("--host",default="127.0.0.1")
     args=a.parse_args()
-    serve(port=args.port,workspace=args.workspace)
+    serve(host=args.host,port=args.port,workspace=args.workspace)
