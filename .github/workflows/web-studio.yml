@@ -1,0 +1,59 @@
+name: Cinema Studio web editor and distributable
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web-editor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install render engine and pro optional Python adapters for regression
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libvidstab1.1
+          python -m pip install -r requirements-professional.txt
+      - name: Validate UI JavaScript using Node
+        run: |
+          node - <<'JS'
+          const fs = require('fs');
+          const html=fs.readFileSync('web/index.html','utf8');
+          const script=html.match(/<script>([\s\S]*?)<\/script>/);
+          if(!script) throw Error('Editor UI script missing');
+          fs.writeFileSync('/tmp/cinema-ui.js',script[1]);
+          JS
+          node --check /tmp/cinema-ui.js
+      - name: Real HTTP integration including render, security, persistence, AI auto-mode
+        run: python -m unittest discover -s tests -p 'test_web_workspace.py' -v
+      - name: Create verified no-vendored-binary release ZIP
+        run: |
+          python - <<'PY'
+          import hashlib,zipfile
+          from pathlib import Path
+          root=Path('.')
+          output=Path('Cinema-Edit-Studio-host-bundle.zip')
+          excludes={'.git','__pycache__','.venv','workspace','outputs','tmp'}
+          with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as z:
+              for file in root.rglob('*'):
+                  if not file.is_file() or any(p in excludes for p in file.parts) or file==output:
+                      continue
+                  if file.suffix.lower() in ('.mov','.mp4','.wav','.mp3','.png','.jpg','.bin','.pth'):
+                      continue
+                  z.write(file,Path('Cinema-Edit-Studio')/file)
+          with zipfile.ZipFile(output) as z:
+              assert z.testzip() is None
+              assert any(x.endswith('/studio_web.py') for x in z.namelist())
+              assert any(x.endswith('/web/index.html') for x in z.namelist())
+              print('Files',len(z.namelist()),'SHA256',hashlib.sha256(output.read_bytes()).hexdigest())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cinema-studio-host-bundle
+          path: Cinema-Edit-Studio-host-bundle.zip
+          retention-days: 14

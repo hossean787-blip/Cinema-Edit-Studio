@@ -18,7 +18,7 @@ def call(args,timeout=1200):
     if r.returncode:raise RuntimeError((r.stderr or r.stdout)[-1500:])
     return r.stdout
 
-def options_render(source_files,destination,*,music=None,seconds=12,width=720,height=1280,
+def options_render(source_files,destination,*,music=None,seconds=12,width=720,height=1280,fps=30,
                    style='sport',stabilize_input=False,detect_scenes=False,
                    auto_editor=None,frei0r=None,ocio_config=None,ocio_input=None,
                    ocio_output=None,with_otio=True,with_mlt=True,
@@ -85,7 +85,7 @@ def options_render(source_files,destination,*,music=None,seconds=12,width=720,he
             stages['mlt_xml']=str(saved)
         rendered=tmp/'edited.mp4'
         result=render_cinematic(prepared,rendered,music=music,seconds=seconds,
-                                width=width,height=height,style=style,interpolate=interpolate)
+                                width=width,height=height,fps=fps,style=style,interpolate=interpolate)
         stages['ffmpeg']=result
         current=rendered
         if frei0r:
