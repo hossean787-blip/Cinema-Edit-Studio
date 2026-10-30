@@ -16,7 +16,7 @@ class ExportTests(unittest.TestCase):
             src=Path(temp)/"sample.mp4"
             dst=Path(temp)/"cinematic.mp4"
             subprocess.run(["ffmpeg","-v","error","-y","-f","lavfi","-i",
-                            "testsrc2=size=180x320:rate=20","-t",".5",
+                            "testsrc2=size=180x320:rate=20","-t","0.5",
                             "-c:v","libx264",str(src)],check=True)
             apply(src,dst,preset="punch",width=180,height=320)
             info=inspect(dst,min_width=180,min_height=320)
