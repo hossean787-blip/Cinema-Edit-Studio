@@ -20,6 +20,8 @@ jobs:
           sudo apt-get install -y ffmpeg libvidstab1.1 frei0r-plugins melt
       - name: Install dedicated Python dependencies
         run: python -m pip install -r requirements-professional.txt
+      - name: Record toolchain inventory
+        run: python doctor_pro.py > doctor_pro.json
       - name: Run professional integration tests and legacy regression
         run: |
           python -m py_compile studio_backends.py studio_pro.py
@@ -46,6 +48,7 @@ jobs:
             timeline.mlt
             mlt_render.mp4
             frei0r.mp4
+            doctor_pro.json
           if-no-files-found: ignore
           retention-days: 3
   auto-editor:
