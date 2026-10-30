@@ -1,0 +1,49 @@
+name: Render Free Docker authenticated startup smoke
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - studio_web.py
+      - web/**
+      - .github/workflows/render-container-smoke.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  docker-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build actual Render Dockerfile
+        run: docker build --tag cinema-beta-smoke .
+      - name: Start in private CI container and verify authentication
+        run: |
+          docker run -d --name cinema-smoke -p 127.0.0.1:18877:10000 \
+            -e PORT=10000 \
+            -e CINEMA_AUTH_USER=ci-studio \
+            -e CINEMA_AUTH_PASSWORD=ci-only-long-test-password-12345 \
+            cinema-beta-smoke
+          for i in $(seq 1 45); do
+            if curl -fsS -u 'ci-studio:ci-only-long-test-password-12345' \
+              http://127.0.0.1:18877/api/projects >/dev/null; then break; fi
+            if ! docker inspect -f '{{.State.Running}}' cinema-smoke | grep -q true; then docker logs cinema-smoke; exit 1; fi
+            sleep 2
+          done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18877/api/projects)" = 401
+          test "$(curl -s -o /dev/null -w '%{http_code}' -u 'ci-studio:wrong' http://127.0.0.1:18877/api/projects)" = 401
+          curl -fsS -u 'ci-studio:ci-only-long-test-password-12345' \
+            http://127.0.0.1:18877/api/capabilities > /tmp/cinema-capabilities.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/cinema-capabilities.json'))
+          assert d['ffmpeg'], d
+          print('Authenticated browser API and FFmpeg: OK')
+          PY
+      - name: Diagnostics on failure
+        if: failure()
+        run: docker logs cinema-smoke || true
+      - name: Clean up
+        if: always()
+        run: docker rm -f cinema-smoke || true
