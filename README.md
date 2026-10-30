@@ -40,3 +40,19 @@ The optional `--interpolate` invokes FFmpeg's motion-compensated minterpolate fi
 
 ## Verification
 Run `python -m unittest discover -s tests -v`. Basic assembler tests (5) and a separate optical-flow smoke render were run successfully in a temporary execution environment on 2026-10-30. GitHub Actions results remain unconfirmed; external AI integrations, GPU pipelines, and product readiness remain pending.
+
+
+## Desktop application (initial working source)
+Run `python desktop_gui.py` on a computer with Python, Tkinter and FFmpeg. Choose videos, adjust shot timing and speed, order clips, optionally add music, then export MP4. This is a local lightweight desktop renderer, not a live-preview nonlinear editor. It creates no on-screen captions. Local desktop GUI has not been usability-tested on the user's Windows 7 laptop.
+
+## Automatic rhythm starter
+Run `python beat_project.py music.mp3 clip1.mp4 clip2.mp4 -o beat_edit.json`, then `python studio.py beat_edit.json -o output/beat_reel.mp4`. Beat markers are approximate and source shot length requirements apply.
+
+## Quality control
+`python quality_check.py output/reel.mp4 --width 1080 --height 1920 --audio` checks size, streams, and decodes the full export (no guarantee of creative quality).
+
+## Demo
+GitHub Actions `Render synthetic demo` can generate a downloadable artifact when manually dispatched. A successful run has not been verified.
+
+## GPU work blocked by environment
+RIFE / Real-ESRGAN and Blender are optional external tools, NOT activated by committing adapters. Their models, hardware, release-specific CLI behavior, license and actual service costs require validation. Nothing will auto-purchase or provision a paid GPU.
