@@ -51,9 +51,65 @@ class Studio:
         self.db=sqlite3.connect(self.root/"queue.sqlite3",check_same_thread=False)
         self.lock=threading.RLock()
         with self.lock:
-            self.db.execute("""CR
-…[1 chars truncated — re-run with head/grep/tail for full output]…
- out=[]
+            self.db.execute("""CREATE TABLE IF NOT EXISTS jobs(
+                 id TEXT PRIMARY KEY,project TEXT NOT NULL,status TEXT NOT NULL,
+                 progress INTEGER NOT NULL, detail TEXT NOT NULL,
+                 params TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,
+                 error TEXT NOT NULL DEFAULT '',created REAL NOT NULL,updated REAL NOT NULL)""")
+            self.db.execute("UPDATE jobs SET status='queued',detail='بازیابی بعد از قطع اجرا' WHERE status='running'")
+            self.db.commit()
+        self.pending=queue.Queue()
+        for (id,) in self.db.execute("SELECT id FROM jobs WHERE status='queued' ORDER BY created"):
+            self.pending.put(id)
+        self.worker_enabled=worker
+        self.worker_thread=None
+        self.closed=False
+        if worker:
+            self.worker_thread=threading.Thread(target=self._work,daemon=True,name="cinema-render-worker")
+            self.worker_thread.start()
+
+    def close(self):
+        if self.closed:return
+        self.closed=True
+        if self.worker_thread is not None:
+            self.pending.put(None)
+            self.worker_thread.join(timeout=3)
+        with self.lock:self.db.close()
+
+
+    def _project_dir(self,id):
+        if not isinstance(id,str) or len(id)!=32 or any(c not in '0123456789abcdef' for c in id):
+            raise ValueError("شناسه پروژه نامعتبر است")
+        p=(self.projects/id).resolve()
+        if p.parent!=self.projects.resolve():raise ValueError("مسیر نامعتبر")
+        return p
+
+    def create(self,title="پروژه جدید"):
+        id=uuid.uuid4().hex
+        p=self._project_dir(id)
+        p.mkdir()
+        (p/"media").mkdir()
+        (p/"exports").mkdir()
+        obj={"id":id,"title":str(title)[:80] or "پروژه جدید",
+             "created":time.time(),"updated":time.time(),"media":[],"shots":[],
+             "music":None,"settings":{"width":720,"height":1280,"fps":30,
+             "style":"sport","transition":0.12,"optical_flow":True,
+             "stabilize":False,"rife":False,"realesrgan":False,"auto":False}}
+        self._atomic_write(p/"project.json",obj)
+        return obj
+
+    def _atomic_write(self,path,obj):
+        tmp=path.with_suffix(path.suffix+".tmp")
+        tmp.write_text(json.dumps(obj,ensure_ascii=False,indent=2),encoding="utf-8")
+        os.replace(tmp,path)
+
+    def read(self,id):
+        path=self._project_dir(id)/"project.json"
+        if not path.is_file():raise FileNotFoundError("پروژه پیدا نشد")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def list(self):
+        out=[]
         for p in self.projects.iterdir():
             f=p/"project.json"
             if f.is_file():
@@ -351,9 +407,12 @@ class Handler(BaseHTTPRequestHandler):
             if len(parts)==4 and parts[:2]==["api","projects"] and parts[3]=="save":
                 return self.send(studio.save(parts[2],self.json_body()))
             if len(parts)==4 and parts[:2]==["api","projects"] and parts[3]=="render":
-                # Allow empty JSON body for render.
+                # Drain JSON request body before closing HTTP/1.0 connection:
+                # unread bytes can cause TCP RST and truncate otherwise valid responses.
+                if int(self.headers.get("Content-Length","0")): self.json_body()
                 return self.send(studio.enqueue(parts[2]),202)
             if len(parts)==4 and parts[:2]==["api","jobs"] and parts[3]=="retry":
+                if int(self.headers.get("Content-Length","0")): self.json_body()
                 return self.send(studio.retry(parts[2]),202)
             raise FileNotFoundError("درخواست نامعتبر")
         except (ValueError,FileNotFoundError,KeyError,TypeError,OverflowError) as e:
