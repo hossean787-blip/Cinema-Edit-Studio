@@ -20,10 +20,12 @@ def select(clips):
     return [p for _,p in sorted(scores,reverse=True)]
 
 def render(clips,out,width=360,height=640,fps=30,transition=.16,music=None,interpolate=True):
-    if not clips or width%2 or height%2 or fps<=0 or not 0<=transition<.4:raise ValueError("Invalid settings")
+    if not clips or width<16 or height<16 or width%2 or height%2 or fps<1 or fps>120 or not 0<=transition<.4:raise ValueError("Invalid settings")
     clips=[Path(x).resolve() for x in clips]
     if any(not x.is_file() for x in clips):raise FileNotFoundError("Source missing")
-    out=Path(out).resolve();out.parent.mkdir(parents=True,exist_ok=True)
+    out=Path(out).resolve()
+    if out in clips: raise ValueError("Output cannot overwrite an input")
+    out.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="cinema-phase2-") as temp:
         folder=Path(temp);parts=[]
         for n,source in enumerate(select(clips)):
