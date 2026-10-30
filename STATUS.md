@@ -54,3 +54,16 @@ GitHub Actions: runner availability depends on account limits and billing; no su
 - RIFE, Real-ESRGAN GPU inferencing and Blender actual 3D rendering remain *unverified and not activated* (GPU / binaries absent). No paid services configured. Blender template and adapters exist as separate optional components.
 - Application is an assistant-invoked rendering engine, not an asynchronous perpetual service and not a finished commercial NLE.
 - User-side installation requirement: none. Rendering runtime needs FFmpeg, which is available in this chat's execution environment.
+
+
+## Verified integration release candidate — 2026-10-30
+- Main entry: `cinema_integrated.py` with optional `--three-d-intro` using `tire_3d_cpu.py` (actual CPU-projected 3D mesh; not Blender).
+- Automated local tests: 5 passed (core audio/video pipeline and CPU-3D output).
+- Tested artifacts on five original video uploads in this conversation:
+  * base textless 720×1280 MP4, 10 shots, 8.77 sec, complete H.264/AAC decode passed;
+  * 1080×1920 resized MP4, 8.77 sec, complete H.264/AAC decode passed;
+  * optional CPU-3D intro + five-clip montage, 720×1280 MP4, 8.73 sec, complete H.264/AAC decode passed.
+- Audio measured approximately mean -18.1 dB and peak -2.3 dB in base output (FFmpeg volumedetect).
+- Source archive `Cinema-Edit-Studio-integrated-v0.2.zip` created in chat; archive CRC, extraction and complete 5-test rerun passed. No user videos are included in the backup.
+- GitHub source and tests committed to main; CI results are still unverified (combined status empty).
+- Neural RIFE, Real-ESRGAN, true Blender compositions, commercial release and remote asynchronous operation remain *incomplete*. Upconverted Full HD is not true neural restoration.
