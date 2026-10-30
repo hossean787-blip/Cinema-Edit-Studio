@@ -52,6 +52,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(u["type"],"video")
         current=self.request("/api/projects/"+p["id"])
         self.assertEqual(len(current["shots"]),1)
+        self.assertAlmostEqual(current["shots"][0]["duration"],3.0,delta=.08)
         s=current["shots"][0];s.update(start=.3,duration=1.3,speed=.75)
         current["settings"].update(width=160,height=288,fps=24,transition=0.0)
         saved=self.request("/api/projects/"+p["id"]+"/save","POST",{
