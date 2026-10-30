@@ -121,7 +121,38 @@ function updateOverlay(){if(!project)return;const media=$('#overlay-source').val
  project.overlay=media?{media,at:Number($('#overlay-start').value),duration:Number($('#overlay-length').value),
  scale:Number($('#overlay-scale').value),position:$('#overlay-position').value}:null;draw()}
 for(const id of ['overlay-source','overlay-start','overlay-length','overlay-scale','overlay-position'])$('#'+id).onchange=updateOverlay;
-$('#upload').onchange=async e=>{if(createInFlight)await createInFlight;if(!project)await create();for(const f of [...e.target.files]){try{$('#upload-status').textContent='در حال دریافت '+f.name+' ...';let r=await fetch('/api/projects/'+project.id+'/upload?name='+encodeURIComponent(f.name),{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:f});let data=await r.json();if(!r.ok)throw Error(data.error);project=await api('/api/projects/'+project.id);selected=project.shots.length-1;draw();report('فایل اضافه شد: '+f.name)}catch(err){report(err.message,true)}}$('#upload-status').textContent='';e.target.value=''};
+$('#upload').onchange=async e=>{
+ const input=e.target, status=$('#upload-status'), files=Array.from(input.files||[]);
+ if(!files.length){status.textContent='فایلی انتخاب نشد';return}
+ input.disabled=true;
+ try{
+  if(createInFlight)await createInFlight;
+  if(!project)await create();
+  for(let i=0;i<files.length;i++){
+   const file=files[i];
+   status.textContent='آماده‌سازی '+(i+1)+' از '+files.length+': '+file.name;
+   try{
+    if(file.size>95*1024*1024)throw Error('حجم این فایل برای آپلود در Render Free زیاد است؛ فایل کمتر از ۹۵ مگابایت انتخاب کنید.');
+    const body=await new Promise((resolve,reject)=>{
+     const xhr=new XMLHttpRequest();
+     xhr.open('POST','/api/projects/'+project.id+'/upload?name='+encodeURIComponent(file.name),true);
+     xhr.setRequestHeader('Content-Type','application/octet-stream');
+     xhr.upload.onprogress=ev=>{if(ev.lengthComputable)status.textContent='آپلود '+file.name+': '+Math.round(ev.loaded/ev.total*100)+'٪'};
+     xhr.onload=()=>{let data;try{data=JSON.parse(xhr.responseText)}catch(_){reject(Error('پاسخ سرور نامعتبر است (HTTP '+xhr.status+')'));return}if(xhr.status>=200&&xhr.status<300)resolve(data);else reject(Error(data.error||'خطای HTTP '+xhr.status))};
+     xhr.onerror=()=>reject(Error('اتصال هنگام آپلود قطع شد؛ اینترنت و وضعیت سرور را بررسی کنید'));
+     xhr.ontimeout=()=>reject(Error('مهلت آپلود پایان یافت'));
+     xhr.timeout=300000;
+     xhr.send(file);
+    });
+    project=await api('/api/projects/'+project.id);
+    selected=project.shots.length-1;draw();
+    status.textContent='✓ آپلود موفق: '+file.name;
+    report('فایل اضافه شد: '+file.name);
+   }catch(err){status.textContent='✕ آپلود ناموفق ('+file.name+'): '+err.message;report(err.message,true);break}
+  }
+ }catch(err){status.textContent='✕ '+err.message;report(err.message,true)}
+ finally{input.disabled=false;input.value=''}
+};
 document.querySelector('.upload').addEventListener('dragover',e=>e.preventDefault());document.querySelector('.upload').addEventListener('drop',e=>{e.preventDefault();$('#upload').files=e.dataTransfer.files;$('#upload').dispatchEvent(new Event('change'))});
 async function init(){try{caps=await api('/api/capabilities');$('#rife').disabled=!caps.rife;$('#esrgan').disabled=!caps.realesrgan;$('#blender').disabled=!caps.blender;$('#auto').disabled=!caps.scenedetect;$('#stab').disabled=!caps.vidstab;$('#capabilities').innerHTML='FFmpeg: '+(caps.ffmpeg?'✓ فعال':'✗ غیرفعال')+'<br>RIFE: '+(caps.rife?'دردسترس':'بدون مدل')+'<br>Real-ESRGAN: '+(caps.realesrgan?'دردسترس':'بدون مدل')+'<br>Blender: '+(caps.blender?'دردسترس':'اختیاری')+'<br>PySceneDetect: '+(caps.scenedetect?'فعال':'در میزبان موجود نیست')+'<br>Vid.Stab: '+(caps.vidstab?'فعال':'دردسترس نیست')+'<br>OTIO: '+(caps.otio?'فعال':'خروجی اختیاری غیرفعال');$('#ai-info').textContent=caps.note;await listProjects();if(projects.length)await load(projects[0].id);else await create()}catch(e){report(e.message,true)}}init();
 </script></body></html>
