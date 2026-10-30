@@ -24,9 +24,15 @@ async function main() {
    await page.goto(origin,{waitUntil:'domcontentloaded'});
    await page.waitForSelector('.project-item',{timeout:20000});
    assert.match(await page.title(),/CINEMA EDIT STUDIO/);
+   const previousProject=await page.locator('.project-item.active').getAttribute('data-project');
    await page.locator('#new').click();
+   await page.waitForFunction(previous=>document.querySelector('.project-item.active')?.dataset.project!==previous,
+      previousProject,{timeout:20000});
    await page.locator('#upload').setInputFiles(source);
-   await page.waitForFunction(()=>document.querySelectorAll('[data-shot]').length>=1,null,{timeout:30000});
+   try {await page.waitForFunction(()=>document.querySelectorAll('[data-shot]').length>=1,null,{timeout:30000})}
+   catch(e){console.error('First upload diagnostics',{
+     status:await page.locator('#upload-status').textContent(),
+     footer:await page.locator('#footer-status').textContent(),issues});throw e}
    await page.locator('#upload').setInputFiles({name:'clip_second.mp4',mimeType:'video/mp4',
      buffer:fs.readFileSync(source)});
    try {
@@ -77,11 +83,23 @@ async function main() {
    await page.screenshot({path:path.join(output,'editor_mobile.png'),fullPage:true});
    const horizontalOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);
    assert.equal(horizontalOverflow,false,'mobile horizontal overflow');
+   // Regression: a user can click New and immediately upload without losing the file.
+   const beforeRapid=await page.locator('.project-item.active').getAttribute('data-project');
+   await page.locator('#new').click();
+   await page.locator('#upload').setInputFiles({name:'rapid_followup.mp4',mimeType:'video/mp4',
+      buffer:fs.readFileSync(source)});
+   await page.waitForFunction(prev=>{
+      const chosen=document.querySelector('.project-item.active')?.dataset.project;
+      return chosen&&chosen!==prev&&document.querySelectorAll('[data-shot]').length===1;
+    },beforeRapid,{timeout:25000});
+   const rapidId=await page.locator('.project-item.active').getAttribute('data-project');
+   const rapid=await (await page.request.get(origin+'/api/projects/'+rapidId)).json();
+   assert.equal(rapid.shots.length,1);
    // Chromium sometimes emits harmless media decoding warnings; page JS exceptions remain fatal.
    assert.equal(issues.filter(x=>!x.includes('Failed to load resource')).length,0,issues.join('\n'));
    const result={browser:'Chromium',http:true,editor:true,clip_count:2,
        speed_ramp:true,persist:true,full_decode_in_ci:'handled by server test',
-       output_download_bytes:payload.length,mobile_390px_no_overflow:true,
+       output_download_bytes:payload.length,mobile_390px_no_overflow:true,rapid_new_project_upload_safe:true,
        page_errors:issues};
    fs.writeFileSync(path.join(output,'browser_qa.json'),JSON.stringify(result,null,2));
    console.log(JSON.stringify(result,null,2));
