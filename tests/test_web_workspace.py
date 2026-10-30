@@ -63,6 +63,7 @@ class WorkspaceTests(unittest.TestCase):
             if state["status"] in ("done","failed"):break
             time.sleep(.15)
         self.assertEqual(state["status"],"done",str(state))
+        self.assertEqual(self.request("/api/projects/"+p["id"]+"/jobs")["jobs"][0]["id"],job["id"])
         video=self.request(state["video_url"])
         self.assertGreater(len(video),1000)
         export=self.root/"workspace"/"projects"/p["id"]/"exports"/(job["id"]+".mp4")
@@ -84,6 +85,27 @@ class WorkspaceTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.studio.save(p["id"],{"shots":[s]})
         with self.assertRaises(FileNotFoundError):self.studio.retry("a"*32)
 
+
+    def test_overlay_second_video_track_is_rendered(self):
+        project=self.studio.create("لایه تصویر")
+        item=self.studio.upload(project["id"],io.BytesIO(self.input.read_bytes()),
+                self.input.stat().st_size,"source.mp4")
+        p=self.studio.read(project["id"])
+        overlay={"media":item["id"],"at":.3,"duration":1.0,
+                 "scale":.3,"position":"bottom-right"}
+        p["settings"].update(width=160,height=288,fps=24)
+        obj=self.studio.save(project["id"],{"settings":p["settings"],
+                    "overlay":overlay})
+        self.assertEqual(obj["overlay"]["position"],"bottom-right")
+        with self.assertRaises(ValueError):
+            self.studio.save(project["id"],{"overlay":dict(overlay,position="offscreen")})
+        out=self.root/"with_overlay.mp4"
+        render_timeline([{"file":str(self.input),"start":0,"duration":1.8,"speed":1}],
+            out,resolution=(160,288),fps=24,
+            overlay=dict(overlay,file=str(self.input)))
+        self.assertGreater(out.stat().st_size,1000)
+        subprocess.run(["ffmpeg","-v","error","-xerror","-i",str(out),
+                        "-f","null","-"],check=True)
 
     def test_speed_ramp_render_and_no_overwrite(self):
         out=self.root/"ramp.mp4"
@@ -117,6 +139,26 @@ class WorkspaceTests(unittest.TestCase):
             urllib.request.urlopen(origin)
         self.assertEqual(cm.exception.code,400)
 
+
+    def test_optional_blender_failure_keeps_base_video(self):
+        p=self.studio.create()
+        self.studio.upload(p["id"],io.BytesIO(self.input.read_bytes()),
+                           self.input.stat().st_size,"source.mp4")
+        current=self.studio.read(p["id"])
+        current["settings"].update(width=160,height=288,fps=24,blender=True)
+        self.studio.save(p["id"],{"settings":current["settings"]})
+        job=self.studio.enqueue(p["id"])
+        for _ in range(120):
+            state=self.studio.job(job["id"])
+            if state["status"] in ("done","failed"):break
+            time.sleep(.12)
+        self.assertEqual(state["status"],"done",str(state))
+        # In CI no Blender is installed; if a compatible binary is present,
+        # full 3D rendering may run instead and no warning is expected.
+        video=self.studio._project_dir(p["id"])/"exports"/(job["id"]+".mp4")
+        self.assertGreater(video.stat().st_size,1000)
+        if not self.studio.capabilities()["blender"]:
+            self.assertIn("Blender",state["error"])
 
     def test_auto_mode_existing_scene_engine(self):
         p=self.studio.create()
