@@ -19,6 +19,12 @@ class Phase2Tests(unittest.TestCase):
             self.assertGreater(result["seconds"],2)
             self.assertEqual(result["clips"],2)
             subprocess.run(["ffmpeg","-v","error","-xerror","-i",str(out),"-f","null","-"],check=True)
+    def test_refuse_source_overwrite(self):
+        with tempfile.TemporaryDirectory() as td:
+            source=Path(td)/"input.mp4"
+            source.write_bytes(b"test")
+            with self.assertRaisesRegex(ValueError,"overwrite"):
+                render([source],source,width=160,height=288)
     def test_invalid_geometry(self):
         with self.assertRaises(ValueError):render(["fake.mp4"],"out.mp4",width=161)
 if __name__=="__main__":unittest.main()
