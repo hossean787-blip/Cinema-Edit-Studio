@@ -173,8 +173,8 @@ class Studio:
                 if start<0 or dur<=0 or speed<.2 or speed>4 or start+dur>m["duration"]+.08:
                     raise ValueError("محدوده یا سرعت نما نامعتبر است")
                 if type(shot.get("ramp",False)) is not bool:raise ValueError("Speed Ramp نامعتبر")
-            cleaned.append({"media":m["id"],"start":start,"duration":dur,
-                            "speed":speed,"ramp":shot.get("ramp",False)})
+                cleaned.append({"media":m["id"],"start":start,"duration":dur,
+                                "speed":speed,"ramp":shot.get("ramp",False)})
             settings=obj["settings"].copy()
             settings.setdefault("auto",False)
             new=data.get("settings",{})
