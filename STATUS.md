@@ -173,3 +173,5 @@ Observed user screenshot: remote Android UI loads, but selection/upload does not
 - **در حال اجرا:** CI/build evidence and redeployment to Render Free. Latest production instance cannot be controlled directly from this GitHub-only session.
 - **متوقف به‌دلیل مانع:** Render Free ephemeral disk, 512 MiB memory and 0.1 CPU do not satisfy persistent professional video processing. End-user Chrome 109 and Android multi-file render/download remain untested; neither long footage nor AI GPU models are certified.
 - **Next action:** check the new GitHub Actions run results, deploy latest main image, execute a multi-file upload+music+render in the user browser, then independently verify ZIP, output and resource usage. No production-ready status asserted.
+
+- Docker image CI added in `.github/workflows/render-container-smoke.yml`: build production Dockerfile, start with test-only Basic Auth, check 401 for unauthorized attempts and authenticated FFmpeg capability. Committed directly to main at 0536aa84. **Run result not yet confirmed**; no claim of test success.
