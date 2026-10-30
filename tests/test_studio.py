@@ -19,7 +19,7 @@ class ReelTests(unittest.TestCase):
         self.output = self.root / "result.mp4"
 
     def save(self, shots, **extra):
-        config = {"resolution": [320, 576], "fps": 24, "shots": shots, **extra}
+        config = {"resolution": [320, 576], "fps": 24, "shots": shots}\n        config.update(extra)
         self.project.write_text(json.dumps(config), encoding="utf-8")
 
     def test_empty_shots_rejected(self):
