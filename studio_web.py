@@ -5,6 +5,7 @@ No external hosting, cloud service, subprocess command interpolation or third-pa
 """
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -208,7 +209,15 @@ class Studio:
         def executable(name,env):
             value=os.environ.get(env)
             return bool(shutil.which(name) or (value and Path(value).is_file()))
-        return {"ffmpeg":bool(shutil.which("ffmpeg")),
+        ffmpeg=shutil.which("ffmpeg")
+        filters=""
+        if ffmpeg:
+            try:
+                filters=subprocess.run([ffmpeg,"-hide_banner","-filters"],capture_output=True,text=True,timeout=8).stdout
+            except (OSError,subprocess.TimeoutExpired):pass
+        return {"ffmpeg":bool(ffmpeg),"scenedetect":importlib.util.find_spec("scenedetect") is not None,
+          "otio":importlib.util.find_spec("opentimelineio") is not None,
+          "vidstab":"vidstabdetect" in filters and "vidstabtransform" in filters,
           "rife":executable("rife-ncnn-vulkan","RIFE_BIN"),
           "realesrgan":executable("realesrgan-ncnn-vulkan","REALESRGAN_BIN"),
           "blender":executable("blender","BLENDER_BIN"),
@@ -318,7 +327,7 @@ class Studio:
                                         at=layer["at"],duration=layer["duration"],
                                         scale=layer["scale"],position=layer["position"])
                     os.replace(layered,output)
-                ai_warnings=[]
+                ai_warnings=list(result.get("warnings",[]))
                 if settings.get("blender"):
                     try:
                         from blender_composite import append_blender_scene
