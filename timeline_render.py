@@ -18,9 +18,33 @@ def exec_checked(args, timeout=3600):
     p=subprocess.run([str(x) for x in args],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=timeout)
     if p.returncode: raise RuntimeError((p.stderr or b"render failed").decode("utf-8","replace")[-1800:])
 
+def apply_overlay_video(base, source, destination, width, height, at=0.0,
+                        duration=2.0, scale=0.30, position="top-left"):
+    """Actual second video picture-in-picture layer, preserving primary audio."""
+    base=Path(base).resolve();source=Path(source).resolve();destination=Path(destination).resolve()
+    if not base.is_file() or not source.is_file() or destination in (base,source):
+        raise ValueError("Invalid overlay files")
+    if position not in ("top-left","top-right","bottom-left","bottom-right"):
+        raise ValueError("Invalid overlay position")
+    if not 0.15<=scale<=0.60 or at<0 or duration<=0:
+        raise ValueError("Invalid overlay timing or size")
+    ow=max(2,round(width*scale/2)*2)
+    oh=max(2,round(height*scale/2)*2)
+    x="24" if position.endswith("left") else "main_w-overlay_w-24"
+    y="24" if position.startswith("top") else "main_h-overlay_h-24"
+    graph=(f"[1:v]scale={ow}:{oh}:force_original_aspect_ratio=decrease,"
+           f"format=yuva420p[ol];[0:v][ol]overlay=x={x}:y={y}:"
+           f"enable='between(t,{at},{at+duration})':shortest=0:format=auto,"
+           f"format=yuv420p[out]")
+    exec_checked(["ffmpeg","-v","error","-y","-i",base,"-stream_loop","-1","-i",source,
+                 "-filter_complex",graph,"-map","[out]","-map","0:a:0?",
+                 "-c:v","libx264","-preset","veryfast","-crf","20",
+                 "-c:a","copy","-shortest","-movflags","+faststart",destination])
+    return destination
+
 def render_timeline(shots, output, *, resolution=(720,1280), fps=30,
                     style="sport", transition=0.12, music=None,
-                    optical_flow=True, stabilize=False, on_progress=None):
+                    optical_flow=True, stabilize=False, overlay=None, on_progress=None):
     w,h=map(int,resolution)
     fps=int(fps); output=Path(output).resolve()
     if not shots or len(shots)>80:raise ValueError("Number of shots must be 1–80")
@@ -117,6 +141,12 @@ def render_timeline(shots, output, *, resolution=(720,1280), fps=30,
                       "-stream_loop","-1","-i",music,"-map","0:v:0","-map","1:a:0",
                       "-c:v","copy","-c:a","aac","-b:a","192k","-shortest",
                       "-movflags","+faststart",stage])
+        if overlay:
+            layered=tmp/"layered.mp4"
+            apply_overlay_video(stage,overlay["file"],layered,w,h,
+                at=overlay.get("at",0),duration=overlay.get("duration",2),
+                scale=overlay.get("scale",.3),position=overlay.get("position","top-left"))
+            stage=layered
         if on_progress:on_progress(90,"کنترل کامل تصویر و صدا")
         info=verify(stage,w,h,audio=True)
         # Emit editable sidecars referring to durable inputs, not transient fragments.
@@ -125,7 +155,7 @@ def render_timeline(shots, output, *, resolution=(720,1280), fps=30,
         export_mlt(clean,output.with_suffix(".mlt"),fps=fps,music=music if music and music.parent!=tmp else None)
         timing=output.with_suffix(".timeline.json")
         timing.write_text(json.dumps({"shots":clean,"speed_aware":True,"fps":fps,
-            "note":"OTIO/MLT tracks represent raw trim spans; speed ramps are authoritative in timeline JSON."},indent=2))
+            "overlay":overlay,"note":"OTIO/MLT tracks represent raw trim spans; speed ramps and overlay are authoritative in timeline JSON."},indent=2))
         os.replace(stage,output)
         if on_progress:on_progress(100,"رندر تأیید شد")
     return {"file":str(output),"qa":info,"shot_count":len(clean),"resolution":[w,h],"fps":fps}
