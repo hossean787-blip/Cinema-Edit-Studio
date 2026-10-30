@@ -1,0 +1,79 @@
+name: Real AI and Blender CPU smoke
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rife-realesrgan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install software Vulkan and tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg unzip mesa-vulkan-drivers libvulkan1
+      - name: Download official prebuilt models and binaries
+        run: |
+          curl -fL --retry 3 -o rife.zip https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-ubuntu.zip
+          unzip -q rife.zip -d rife-bundle
+          curl -fL --retry 3 -o realesrgan.zip https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip
+          unzip -q realesrgan.zip -d sr-bundle
+      - name: Run genuine model inference and validate outputs
+        run: |
+          mkdir -p frames
+          ffmpeg -v error -y -f lavfi -i testsrc2=size=96x96:rate=2 -frames:v 2 frames/%08d.png
+          cd rife-bundle/rife-ncnn-vulkan-20221029-ubuntu
+          chmod +x rife-ncnn-vulkan
+          ./rife-ncnn-vulkan -0 ../../frames/00000001.png -1 ../../frames/00000002.png -o ../../frames/rife.png -g 0 -j 1:1:1
+          cd ../../sr-bundle
+          chmod +x realesrgan-ncnn-vulkan
+          ./realesrgan-ncnn-vulkan -i ../frames/00000001.png -o ../frames/realesrgan.png -s 2 -n realesrgan-x4plus -g 0 -j 1:1:1
+          cd ..
+          ffprobe -v error -show_entries stream=width,height -of default=nw=1 frames/realesrgan.png | tee frame_size.txt
+          grep -q 'width=192' frame_size.txt
+          test -s frames/rife.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: neural-smoke-evidence
+          path: |
+            frames/rife.png
+            frames/realesrgan.png
+          retention-days: 3
+
+  blender-cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender download prerequisites
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg curl xz-utils
+      - name: Download and verify Blender 4.5.15 LTS
+        run: |
+          curl -fL --retry 3 -o blender.tar.xz https://download.blender.org/release/Blender4.5/blender-4.5.15-linux-x64.tar.xz
+          curl -fL --retry 3 -o checksums https://download.blender.org/release/Blender4.5/blender-4.5.15.sha256
+          grep 'blender-4.5.15-linux-x64.tar.xz' checksums | sed 's/blender-4.5.15-linux-x64.tar.xz/blender.tar.xz/' | sha256sum -c -
+          tar -xf blender.tar.xz
+      - name: Render true Blender CPU geometry and validate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('blender_scene.py')
+          source=p.read_text()
+          source=source.replace('scene.render.engine="BLENDER_EEVEE_NEXT" if bpy.app.version >= (4, 2, 0) else "BLENDER_EEVEE"',
+            'scene.render.engine="CYCLES"\nscene.cycles.device="CPU"\nscene.cycles.samples=8')
+          source=source.replace('scene.render.resolution_x=720','scene.render.resolution_x=240')
+          source=source.replace('scene.render.resolution_y=1280','scene.render.resolution_y=426')
+          source=source.replace('scene.frame_end=90','scene.frame_end=12')
+          Path('ci_blender.py').write_text(source)
+          PY
+          ./blender-4.5.15-linux-x64/blender -b -noaudio --python ci_blender.py -- blender_real.mp4
+          ffmpeg -v error -xerror -i blender_real.mp4 -f null -
+          ffprobe -v error -show_entries stream=width,height:format=duration -of default=nw=1 blender_real.mp4
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: blender-cpu-render
+          path: blender_real.mp4
+          retention-days: 3
