@@ -76,6 +76,21 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(export.with_suffix(".mlt").exists())
         self.assertEqual(self.input.stat().st_size,len(self.input.read_bytes()))
 
+    def test_multi_clip_save_order_and_empty_timeline(self):
+        project=self.studio.create('Multiple videos')
+        for i in range(3):
+            self.studio.upload(project['id'],io.BytesIO(self.input.read_bytes()),
+                self.input.stat().st_size,f'clip-{i}.mp4')
+        doc=self.studio.read(project['id'])
+        self.assertEqual(len(doc['shots']),3)
+        shots=list(reversed(doc['shots']))
+        saved=self.studio.save(project['id'],{'shots':shots})
+        self.assertEqual([x['media'] for x in saved['shots']],
+                         [x['media'] for x in shots])
+        self.assertEqual(len(self.studio.read(project['id'])['shots']),3)
+        empty=self.studio.save(project['id'],{'shots':[]})
+        self.assertEqual(empty['shots'],[])
+
     def test_security_and_validation(self):
         p=self.studio.create()
         with self.assertRaises(ValueError):self.studio._project_dir("../traverse")
