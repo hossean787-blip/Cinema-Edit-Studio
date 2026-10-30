@@ -125,3 +125,15 @@ Recovery instructions: fetch main, inspect this STATUS.md and docs/PRO_RUNBOOK.m
 **متوقف به‌دلیل مانع:** Permanent cloud hosting and multi-user access are not authorized or configured; the browser host binds loopback by default. Windows 7 compatibility with the modern 12-engine binary/model stack has not been established and target Win7 installation was not requested. Public release blocked on authentication, HTTPS, upload malware review, storage privacy/retention and penetration testing.
 
 **Recovery**: Checkout latest `main` (no force-push/new branch), read this STATUS and `docs/WEB_STUDIO.md`, run tests `python -m unittest discover -s tests -v` with the professional pinned requirements on Linux host. Check `Cinema Studio web editor and distributable` Actions run and extracted ZIP. Never silently copy assets from unrelated projects. User originals remain out of Git.
+
+## 2026-10-30/31 — Browser-verified stabilization and commercial gate checkpoint
+
+Start from confirmed `main` revision `c9e9a928adfaf06127e15a20cfaa78d6279af9ac`. All five workflows on that original revision were successful. Fixes and tests made directly on `main`, no new branch.
+
+**تکمیل و آزموده‌شده:** multi-clip timeline persistence (formerly only final shot saved); verified MP4 publication across two actual filesystems (EXDEV fixed); optional AI model-unavailable base MP4 fallback and recovery; UI warning preservation; local favicon; real headless Chromium (143) desktop/mobile test with two media uploads, reorder, speed ramp, save/reload, final render/download, zero page errors and no mobile horizontal overflow; modular 5-synthetic-clip Full HD output 1080×1920 (7.70s render; 775,528 KiB child RSS, 9.83s total CPU, full decode, all inputs unchanged). Clean ZIP extraction booted and rendered 3 clips with H.264/AAC successfully (7.99s video), preserving originals. See `docs/RELEASE_CANDIDATE_QA.md` and `performance/benchmark-2026-10-30-professional.json`.
+
+**در حال اجرا:** real browser QA now checked into `tests/browser_qa_playwright.js` and CI `.github/workflows/web-studio.yml` with screenshots as Artifact. Check latest `main` run outcomes, including the new browser job, before declaring stage complete. The five prior engine-workflows should not be reported as successful for a newly created head without inspecting their specific runs.
+
+**متوقف به‌دلیل مانع:** commercial/public deployment (no authorized persistent private host, TLS/auth, real GPU/long 4K acceptance, Windows 7 Chrome 109 device test, audited model and third-party license rights). Do not call this a publicly hosted or commercial-final product. Preserve user source videos outside Git.
+
+**Recovery:** On `main`, read this section and `docs/RELEASE_CANDIDATE_QA.md`. Run full tests, check latest GitHub Actions results, download GitHub Actions host bundle, restore ZIP to clean Linux, then run `sh packaging/launch-host.sh`. No automatic background work is implied without an active authorized scheduler.
