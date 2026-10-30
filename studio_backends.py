@@ -23,7 +23,7 @@ def scene_intervals(source, threshold=27):
         return [{'start':0.0,'end':round(float(info['format']['duration']),4)}]
     return result
 
-def export_otio(shots, output, fps=30):
+def export_otio(shots, output, fps=30, music=None):
     import opentimelineio as otio
     output=Path(output)
     if not shots:raise ValueError('No source shots')
@@ -40,34 +40,67 @@ def export_otio(shots, output, fps=30):
             otio.opentime.RationalTime.from_seconds(duration,fps))
         track.append(clip)
     timeline.tracks.append(track)
+    if music:
+        audio=Path(music).resolve()
+        if not audio.is_file():raise FileNotFoundError(audio)
+        at=otio.schema.Track(name='Music',kind=otio.schema.TrackKind.Audio)
+        clip=otio.schema.Clip(name=audio.stem,
+            media_reference=otio.schema.ExternalReference(target_url=audio.as_uri()))
+        clip.source_range=otio.opentime.TimeRange(
+            otio.opentime.RationalTime(0,fps),
+            otio.opentime.RationalTime.from_seconds(sum(float(x['duration']) for x in shots),fps))
+        at.append(clip)
+        timeline.tracks.append(at)
     output.parent.mkdir(parents=True,exist_ok=True)
     otio.adapters.write_to_file(timeline,str(output))
     if not output.is_file() or output.stat().st_size<100:raise RuntimeError('Invalid OTIO export')
     return output
 
-def export_mlt(shots, output, fps=30):
-    """Generate editable single-track MLT XML; external executable melt renders it."""
+def export_mlt(shots, output, fps=30, music=None):
+    """Export MLT XML with independent video and optional audio tracks."""
     if not shots:raise ValueError('No clips for MLT')
-    root=ET.Element('mlt',{'LC_NUMERIC':'C','version':'7.0.0'})
+    root=ET.Element('mlt',{'LC_NUMERIC':'C','version':'7.0.0','producer':'final'})
     ET.SubElement(root,'profile',{'description':'Cinema Studio','width':'360','height':'640',
         'progressive':'1','sample_aspect_num':'1','sample_aspect_den':'1',
-        'display_aspect_num':'9','display_aspect_den':'16','frame_rate_num':str(fps),'frame_rate_den':'1'})
-    playlist=ET.SubElement(root,'playlist',{'id':'main'})
+        'display_aspect_num':'9','display_aspect_den':'16',
+        'frame_rate_num':str(fps),'frame_rate_den':'1'})
+    ranges=[];total_frames=0
     for i,shot in enumerate(shots):
         src=Path(shot['file']).resolve()
         if not src.is_file():raise FileNotFoundError(src)
         prod=ET.SubElement(root,'producer',{'id':f'p{i}'})
         ET.SubElement(prod,'property',{'name':'mlt_service'}).text='avformat'
         ET.SubElement(prod,'property',{'name':'resource'}).text=str(src)
-        start=round(float(shot.get('start',0))*fps)
-        end=start+round(float(shot['duration'])*fps)-1
-        if start<0 or end<start:raise ValueError('Invalid MLT timing')
+        first=round(float(shot.get('start',0))*fps)
+        length=round(float(shot['duration'])*fps)
+        if first<0 or length<1:raise ValueError('Invalid MLT timing')
+        ranges.append((i,first,first+length-1))
+        total_frames+=length
+    if music:
+        audio=Path(music).resolve()
+        if not audio.is_file():raise FileNotFoundError(audio)
+        prod=ET.SubElement(root,'producer',{'id':'music_source'})
+        ET.SubElement(prod,'property',{'name':'mlt_service'}).text='avformat'
+        ET.SubElement(prod,'property',{'name':'resource'}).text=str(audio)
+    playlist=ET.SubElement(root,'playlist',{'id':'V1'})
+    for i,start,end in ranges:
         ET.SubElement(playlist,'entry',{'producer':f'p{i}','in':str(start),'out':str(end)})
-    tractor=ET.SubElement(root,'tractor',{'id':'mainTractor'})
-    ET.SubElement(tractor,'track',{'producer':'main'})
-    tree=ET.ElementTree(root)
-    output=Path(output);output.parent.mkdir(parents=True,exist_ok=True)
-    tree.write(output,encoding='utf-8',xml_declaration=True)
+    if music:
+        music_track=ET.SubElement(root,'playlist',{'id':'A1'})
+        ET.SubElement(music_track,'entry',{'producer':'music_source','in':'0','out':str(total_frames-1)})
+    tractor=ET.SubElement(root,'tractor',{'id':'final','out':str(total_frames-1)})
+    ET.SubElement(tractor,'track',{'producer':'V1'})
+    if music:
+        ET.SubElement(tractor,'track',{'producer':'A1','hide':'video'})
+        mix=ET.SubElement(tractor,'transition',{'in':'0','out':str(total_frames-1)})
+        ET.SubElement(mix,'property',{'name':'mlt_service'}).text='mix'
+        ET.SubElement(mix,'property',{'name':'a_track'}).text='0'
+        ET.SubElement(mix,'property',{'name':'b_track'}).text='1'
+        ET.SubElement(mix,'property',{'name':'always_active'}).text='1'
+        ET.SubElement(mix,'property',{'name':'sum'}).text='1'
+    output=Path(output)
+    output.parent.mkdir(parents=True,exist_ok=True)
+    ET.ElementTree(root).write(output,encoding='utf-8',xml_declaration=True)
     return output
 
 def stabilize(source, output, shakiness=5):
