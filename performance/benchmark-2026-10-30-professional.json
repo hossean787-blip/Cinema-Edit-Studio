@@ -1,0 +1,36 @@
+{
+  "run_id": "cinema-5clip-fullhd-2026-10-30",
+  "timestamp_utc": "2026-10-30T20:49:00Z",
+  "source": "five FFmpeg-generated 640x360, 24fps, 1.4s H.264 clips",
+  "kind": "synthetic, not customer media",
+  "execution_environment": "Linux cloud CPU; no dedicated GPU",
+  "results": {
+    "file": "/__modal/volumes/vo-pTzgKSs7YIFqBhu1oYNdXK/cinema-benchmark/FullHD_synthetic.mp4",
+    "qa": {
+      "duration": 5.39,
+      "size_bytes": 1719960,
+      "video_codec": "h264",
+      "audio_codec": "aac",
+      "width": 1080,
+      "height": 1920,
+      "decoded": true,
+      "no_text": true
+    },
+    "shot_count": 5,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "fps": 24,
+    "warnings": [],
+    "wall_seconds": 7.7,
+    "cpu_seconds": 9.83,
+    "max_child_rss_kib": 775528,
+    "source_count": 5,
+    "source_integrity": true,
+    "source_kind": "FFmpeg synthetic moving pattern; NOT customer footage",
+    "gpu": "not used"
+  },
+  "note": "CPU seconds aggregate process and children, max RSS is the largest child process, not sum or average; performance is not a guaranteed real-world benchmark.",
+  "verification": "FFprobe H.264/AAC video+audio, full FFmpeg decode, all five input SHA256 unchanged"
+}
