@@ -186,6 +186,24 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(len(result["warnings"]),2)
         self.assertTrue(output.is_file())
 
+    def test_auto_scene_detector_unavailable_falls_back_to_manual(self):
+        project=self.studio.create('Autocut fallback')
+        self.studio.upload(project['id'],io.BytesIO(self.input.read_bytes()),
+            self.input.stat().st_size,'clip.mp4')
+        p=self.studio.read(project['id'])
+        p['settings'].update(width=160,height=288,fps=24,auto=True)
+        self.studio.save(project['id'],{'settings':p['settings']})
+        with patch('studio_pro.options_render',side_effect=ImportError('PySceneDetect missing')):
+            job=self.studio.enqueue(project['id'])
+            for _ in range(130):
+                state=self.studio.job(job['id'])
+                if state['status'] in ('done','failed'):break
+                time.sleep(.12)
+        self.assertEqual(state['status'],'done',str(state))
+        self.assertIn('PySceneDetect',state['error'])
+        output=self.studio._project_dir(project['id'])/'exports'/(job['id']+'.mp4')
+        self.assertGreater(output.stat().st_size,1000)
+
     def test_ai_missing_models_fallback_and_recover(self):
         project=self.studio.create('Model fallback')
         self.studio.upload(project['id'],io.BytesIO(self.input.read_bytes()),
