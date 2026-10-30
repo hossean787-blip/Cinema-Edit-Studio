@@ -33,3 +33,12 @@ RIFE/Real-ESRGAN: open-source binaries/models separately installed; GPU and driv
 Blender: free to download; CPU rendering may be slow.
 Cloud GPU: may incur cost and needs provider connection/payment approval; not enabled.
 GitHub Actions: runner availability depends on account limits and billing; no successful run verified.
+
+
+## Obstacle follow-up — 2026-10-30
+- Added doctor.py read-only environment diagnostics and tests/test_doctor.py.
+- Updated test-render.yml to record diagnostics and run full test suite plus syntax checks.
+- No GitHub Actions dispatcher is exposed by the available GitHub connection; run has not been started or verified from this session.
+- Access to a CUDA/Vulkan GPU and Blender executable has not been established; heavy model tests and Blender animation output are still pending.
+- No claim of complete operational deployment or finished AI enhancement is supported.
+- Next action: inspect the Actions tab for Verify cinematic studio, obtain run logs; then repair reported failures.
