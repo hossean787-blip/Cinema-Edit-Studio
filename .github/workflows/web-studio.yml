@@ -28,7 +28,7 @@ jobs:
           export CINEMA_WORKSPACE="$RUNNER_TEMP/cinema-private-test"
           sh packaging/launch-host.sh > "$RUNNER_TEMP/cinema-browser-server.log" 2>&1 &
           server_pid=$!
-          trap 'kill "$server_pid" || true' EXIT
+          trap 'cat "$RUNNER_TEMP/cinema-browser-server.log" || true; kill "$server_pid" || true' EXIT
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8877/api/projects >/dev/null; then break; fi
             sleep 1
@@ -40,7 +40,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cinema-browser-visual-qa
-          path: qa-browser-artifacts/
+          path: |
+            qa-browser-artifacts/
+            ${{ runner.temp }}/cinema-browser-server.log
           if-no-files-found: ignore
           retention-days: 14
   web-editor:
