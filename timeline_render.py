@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
 
 from cinema_integrated import generate_music, verify
@@ -168,7 +169,22 @@ def render_timeline(shots, output, *, resolution=(720,1280), fps=30,
         timing=output.with_suffix(".timeline.json")
         timing.write_text(json.dumps({"shots":clean,"speed_aware":True,"fps":fps,
             "overlay":overlay,"note":"OTIO/MLT tracks represent raw trim spans; speed ramps and overlay are authoritative in timeline JSON."},indent=2))
-        os.replace(stage,output)
+        # /tmp can be on another filesystem (EXDEV): stage the verified output
+        # on the destination filesystem, then atomically publish it.
+        dst_part=output.with_name('.'+output.name+'.'+uuid.uuid4().hex+'.partial')
+        try:
+            if shutil.disk_usage(output.parent).free<stage.stat().st_size+4*1024*1024:
+                raise OSError("Not enough free disk space to publish video")
+            with stage.open('rb') as src, dst_part.open('xb') as dst:
+                shutil.copyfileobj(src,dst,1024*1024)
+                dst.flush()
+                os.fsync(dst.fileno())
+            if dst_part.stat().st_size!=stage.stat().st_size:
+                raise OSError("Incomplete final export copy")
+            if output.exists():raise FileExistsError("Output appeared during render")
+            os.replace(dst_part,output)
+        finally:
+            dst_part.unlink(missing_ok=True)
         if on_progress:on_progress(100,"رندر تأیید شد")
     return {"file":str(output),"qa":info,"shot_count":len(clean),"resolution":[w,h],"fps":fps,
             "warnings":warnings}
