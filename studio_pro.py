@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Cinema Edit Studio 12-backend orchestrator; optional stages are explicit."""
 import argparse
+import hashlib
+import os
 import json
 import shutil
 import subprocess
@@ -29,6 +31,12 @@ def options_render(source_files,destination,*,music=None,seconds=12,width=720,he
     if output in inputs or output.exists():raise ValueError('Output exists or equals source')
     if width%2 or height%2 or min(width,height)<64:raise ValueError('Invalid output resolution')
     output.parent.mkdir(parents=True,exist_ok=True)
+    def hash_file(path):
+        h=hashlib.sha256()
+        with open(path,'rb') as fp:
+            for block in iter(lambda:fp.read(1024*1024),b''):h.update(block)
+        return h.hexdigest()
+    source_hashes={str(path):hash_file(path) for path in inputs}
     stages={}
     with tempfile.TemporaryDirectory(prefix='cinema-pro-') as temp:
         tmp=Path(temp)
@@ -126,12 +134,29 @@ def options_render(source_files,destination,*,music=None,seconds=12,width=720,he
                   '-c:a','aac','-movflags','+faststart',concat])
             current=concat
             stages['blender']='executed'
-        shutil.copyfile(current,output)
+        staged=output.with_name(output.name+'.partial')
+        if staged.exists():raise FileExistsError('Stale unfinished export: '+str(staged))
+        shutil.copyfile(current,staged)
         if whisper_binary or whisper_model:
             if not whisper_binary or not whisper_model:raise ValueError('Whisper binary and model both required')
             stages['whisper_cpp_srt']=str(transcribe(inputs[0],output.with_suffix(''),whisper_binary,whisper_model))
-    final=verify(output,width if not realesrgan_binary else width*2,
-                 height if not realesrgan_binary else height*2)
+    try:
+        final=verify(staged,width if not realesrgan_binary else width*2,
+                     height if not realesrgan_binary else height*2)
+        for path,checksum in source_hashes.items():
+            if hash_file(path)!=checksum:raise RuntimeError('Input source changed during rendering')
+        streams=json.loads(call(['ffprobe','-v','error','-show_streams','-of','json',staged]))['streams']
+        videos=[x for x in streams if x.get('codec_type')=='video']
+        audios=[x for x in streams if x.get('codec_type')=='audio']
+        if not videos or not audios:raise RuntimeError('Video or audio missing')
+        v_start=float(videos[0].get('start_time',0))
+        a_start=float(audios[0].get('start_time',0))
+        if abs(v_start-a_start)>.20:raise RuntimeError('Audio/video start times misaligned')
+        final['audio_video_start_delta_s']=round(abs(v_start-a_start),3)
+        os.replace(staged,output)
+    except Exception:
+        if staged.exists():staged.unlink()
+        raise
     manifest={'output':str(output),'original_files_untouched':True,
               'no_burned_captions':True,'modules':stages,'qa':final}
     Path(str(output)+'.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
