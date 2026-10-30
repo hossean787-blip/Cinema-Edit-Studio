@@ -389,6 +389,13 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("دسترسی بین‌سایتی مجاز نیست")
         path=urlsplit(self.path).path;parts=path.strip("/").split("/")
         studio=self.server.studio
+        if path=="/favicon.svg":
+            data=(ROOT_UI.parent/"favicon.svg").read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type","image/svg+xml")
+            self.send_header("Content-Length",str(len(data)))
+            self.send_header("Cache-Control","public, max-age=86400")
+            self.end_headers();self.wfile.write(data);return
         if path in ("/","/index.html"):
             data=ROOT_UI.read_bytes();self.send_response(200)
             self.send_header("Content-Type","text/html; charset=utf-8")
