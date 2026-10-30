@@ -52,6 +52,24 @@ jobs:
               assert any(x.endswith('/web/index.html') for x in z.namelist())
               print('Files',len(z.namelist()),'SHA256',hashlib.sha256(output.read_bytes()).hexdigest())
           PY
+      - name: Verify archive restore and application startup imports
+        run: |
+          python - <<'PYREST'
+          import subprocess, tempfile, zipfile
+          from pathlib import Path
+          with tempfile.TemporaryDirectory() as td:
+              with zipfile.ZipFile('Cinema-Edit-Studio-host-bundle.zip') as package:
+                  assert package.testzip() is None
+                  package.extractall(td)
+              root=Path(td)/'Cinema-Edit-Studio'
+              assert (root/'studio_web.py').is_file()
+              assert (root/'web/index.html').is_file()
+              subprocess.run(['python','-m','py_compile',str(root/'studio_web.py'),str(root/'timeline_render.py')],check=True)
+              subprocess.run(['python','-c',
+                  'from studio_web import Studio; import tempfile; t=tempfile.TemporaryDirectory(); s=Studio(t.name,worker=False); assert len(s.list())==0; s.close()',
+                  ],cwd=root,check=True)
+          print('Extract-and-import restore test passed')
+          PYREST
       - uses: actions/upload-artifact@v4
         with:
           name: cinema-studio-host-bundle

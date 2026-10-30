@@ -22,14 +22,14 @@ Open **http://127.0.0.1:8765** on the render host. Listens only on loopback. Use
 - Multiple uploaded videos/audio tracks in a project library; timeline selectable trim/start/duration, speed, true 3-stage speed ramps and clip reordering/removal.
 - Source video preview (the preview does NOT show post-render effect output), and final MP4 preview after render.
 - Horizontal/vertical preset selection (720×1280, 1080×1920, 1920×1080 and 3840×2160); 24/25/30/60 FPS.
-- Separate audio track: uploaded music or original locally synthesized instrumental. No captions by default.
+- Real optional second video PIP track, with timed placement/size, and separate audio track: uploaded music or original locally synthesized instrumental. No captions by default.
 - Opt-in automatic beat/scene cut mode through existing `studio_pro.py`, or the manual editable timeline `timeline_render.py`.
 - FFmpeg optical-flow slow motion, xfade transitions, color styles; optional Vid.Stab stabilization.
-- Optional RIFE / Real-ESRGAN toggles enabled only if configured binaries exist; model/hardware operation is checked during render. Failures of optional models preserve a base output and report warnings.
+- Optional Blender Cycles CPU ending effect is isolated from the base render, and optional RIFE / Real-ESRGAN toggles are enabled only if configured binaries exist; model/hardware operation is checked during render. Failures of optional models preserve a base output and report warnings.
 - Persistent JSON project manifests and SQLite render queue; queued/running jobs are safely requeued after restart and existing verified files can be recovered.
 - Single-worker scheduling to avoid simultaneous memory-heavy transcodes, up to 12 pending jobs.
 - Original media files are never overwritten; outputs have `.mp4`, `.otio`, `.mlt` and `.timeline.json` sidecars. The OTIO/MLT files preserve clip sources/trim ranges and separate music but **manual speed ramps are authoritative in timeline JSON** rather than fully portable native NLE effects.
-- Failed job messages and explicit retry (maximum two attempts). No opaque endless retries.
+- Last job status and completed video are restored into the UI on project reload. Failed job messages and explicit retry (maximum two attempts). No opaque endless retries.
 
 ## Security and limitations
 

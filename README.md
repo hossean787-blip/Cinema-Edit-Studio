@@ -1,3 +1,15 @@
+# Cinema Edit Studio — Interactive Professional Editor
+
+**New runnable host interface:** `python3 studio_web.py --workspace ./studio_workspace`, then open `http://127.0.0.1:8765` on the authorized rendering host. A host-side installer is not required for the user: rendering can be delegated by uploading videos to ChatGPT, while persistent web UI access requires an approved private host connection.
+
+The implemented Persian RTL dark workspace includes true media uploads, source preview, editable video/audio timeline, optional picture-in-picture visual track, per-clip speed and 3-part ramps, dynamic color/transition controls, 720p/1080p/4K export presets, automatic cut mode, persistent SQLite queue and project save/recovery, AI/Blender settings with capability checks, actual H.264/AAC render and downloadable final preview. **Defaults to no text on footage.**
+
+**Evidence and boundaries:** [host runbook](docs/WEB_STUDIO.md) · [previous professional engine](docs/PRO_RUNBOOK.md) · [benchmarks](performance/benchmark-2026-10-30.json) · [recovery and blockers](STATUS.md) · [GitHub CI](.github/workflows/web-studio.yml).
+
+This is a tested render-host backend, not a publicly deployed commercial SaaS. Public access requires authentication, HTTPS, security/privacy review and authorized hosting. The full model stack is not installed or required on the user's device.
+
+---
+
 # Cinema Edit Studio — 12-engine professional chat workflow
 
 **Primary executable:** studio_pro.py — receive clips in ChatGPT, render with assistant-hosted tools, return H.264/AAC MP4 without installing an application on the user's device.

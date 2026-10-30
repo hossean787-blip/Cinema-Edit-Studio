@@ -103,3 +103,25 @@ Evidence: 25/25 local test suite PASS. Previous CI completed success for Pro too
 Unresolved commercial-release gates: true 1080p sustained RIFE+Real-ESRGAN throughput without dedicated GPU, human quality evaluation against varied real footage, full data retention/privacy and copyright/legal review, release packaging and installation on final commercial host, public service availability and scaling. No paid provider or customer-side install authorized.
 
 Recovery instructions: fetch main, inspect this STATUS.md and docs/PRO_RUNBOOK.md, run Python 3.12 with requirements-professional.txt and python -m unittest discover -s tests -v, inspect pro-backends.yml / other Actions logs, then continue only failing acceptance areas. Preserve customer media outside Git, never claim automated background work.
+
+
+## 2026-10-30 — professional RTL editor and durable render workspace
+
+**Task scope**: create a real no-install-to-user browser workflow for the existing Cinema Edit Studio project. Last verified baseline at start: `7b9e559acb`. Working tree used was a fresh clone to avoid overwriting earlier local modifications. Authorized branch: `main` ONLY.
+
+- **تکمیل و آزموده‌شده:** `timeline_render.py` manual editable FFmpeg timeline with per-shot trim, speeds, actual three-phase speed ramps, optical-flow, color presets, crossfades, uploaded/original soundtrack, no on-screen captions, full decode, OTIO/MLT editable source tracks and authoritative timeline JSON.
+- **تکمیل و آزموده‌شده:** true picture-in-picture overlay second video track with timing, relative size and placement; real FFmpeg output and decode verified.
+- **تکمیل و آزموده‌شده:** `studio_web.py` loopback-only RTL Persian browser UI, binary media uploads with random file IDs, video/audio library, source preview, real settings, project JSON save, SQLite queued jobs, progress/errors, last output recovery and downloadable MP4.
+- **تکمیل و آزموده‌شده:** crash-recovery semantics, source protection, controlled retry, SHA-independent file name safety, cross-site POST restriction, proper HTTP request-body consumption. Failure of an optional Blender/AI model retains the already-produced base video with a warning.
+- **تکمیل و آزموده‌شده:** optional Blender `blender_composite.py` renders a real Cycles scene and appends it after already validated main MP4. A small separate genuine Blender runtime smoke passed. End-user commercial-quality 3D remains unreviewed.
+- **تکمیل و آزموده‌شده:** existing `studio_pro.py` auto beat/scene mode accessible as an alternative; manually edited trims are ignored in auto mode and UI explains this.
+- **تکمیل و آزموده‌شده:** external 5-video real project sample rendered in 720p and resized to 1080x1920 H.264/AAC; 7.8 s media, 81.49 s measured execution, 748728 KiB maximum RSS as reported by GNU time; all five source SHA256 hashes unchanged; full FFmpeg decode passed. **Test used previous integrated backend for real user media**, not the new HTTP browser editor.
+- **تکمیل و آزموده‌شده:** 0.5s synthetic 3840x2160 H.264 encoded and decoded in 1.17s on available environment; not sustained 4K performance proof.
+- Tests: browser/backend API, edited project persistence, auto mode, ramp, PIP, retry/recovery, no-overwrite, cross-origin validation, source and exported MP4. Review CI `web-studio.yml` for exact latest successful run/artifact IDs.
+- Release package: `packaging/launch-host.sh`, `docs/WEB_STUDIO.md`, `performance/benchmark-2026-10-30.json`, GitHub Actions artifact ZIP; excludes customer video/AI weights.
+
+**در حال اجرا:** multi-browser manual visual/a11y QA, sample advanced GPU full-length render, sustained 1080p/4K profiling and licensing sign-off.
+
+**متوقف به‌دلیل مانع:** Permanent cloud hosting and multi-user access are not authorized or configured; the browser host binds loopback by default. Windows 7 compatibility with the modern 12-engine binary/model stack has not been established and target Win7 installation was not requested. Public release blocked on authentication, HTTPS, upload malware review, storage privacy/retention and penetration testing.
+
+**Recovery**: Checkout latest `main` (no force-push/new branch), read this STATUS and `docs/WEB_STUDIO.md`, run tests `python -m unittest discover -s tests -v` with the professional pinned requirements on Linux host. Check `Cinema Studio web editor and distributable` Actions run and extracted ZIP. Never silently copy assets from unrelated projects. User originals remain out of Git.

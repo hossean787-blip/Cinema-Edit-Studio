@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-30",
+  "scope": "Cinema Edit Studio project; same-conversation user-authorized clips",
+  "source": "5 real uploaded videos, earlier integrated renderer (not the new web editor)",
+  "real_5_clips": {
+    "input_count": 5,
+    "duration_seconds": 7.8,
+    "original_sources_sha256_unchanged": true,
+    "first_render_resolution": "720x1280",
+    "delivered_resolution": "1080x1920 (Lanczos resized, NOT AI)",
+    "video_codec": "h264",
+    "audio_codec": "aac",
+    "runtime_seconds": 81.49,
+    "cpu_utilization_time_command_percent": 170,
+    "maximum_resident_set_kib_time_command": 748728,
+    "complete_ffmpeg_decode": "passed",
+    "user_media_committed_to_repository": false
+  },
+  "synthetic_4k": {
+    "duration_seconds": 0.5,
+    "resolution": "3840x2160",
+    "codec": "h264",
+    "encoding_seconds": 1.17,
+    "max_resident_set_kib": 626728,
+    "full_decode": "passed",
+    "limitations": "Only a tiny synthetic sample; not sustained 4K multi-clip throughput."
+  },
+  "real_ai": {
+    "rife": "Prior real model 96x96 1 second video: 2 input frames to 4 output frames, full decode successful",
+    "realesrgan": "Prior real model 96x96 1 second video: 2x to 192x192, full decode successful",
+    "fullhd_real_longform": "not tested"
+  },
+  "blender": {
+    "real_cpu_scene_compositing": "passed on small MP4 using optional Blender binary",
+    "production_performance": "not tested"
+  },
+  "notes": "Reported maximum RSS and utilization originate from GNU time for one process tree, and must not be generalized to all target hosts. A source encode being valid does not prove 4K production readiness."
+}
